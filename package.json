@@ -1,0 +1,11 @@
+{
+    "name": "news",
+    "version": "0.1.0",
+    "private": true,
+    "scripts": {
+        "dev": "concurrently \"cd client && npx expo start\" \"cd server && npm run dev\""
+    },
+    "devDependencies": {
+        "concurrently": "^9.2.1"
+    }
+}
