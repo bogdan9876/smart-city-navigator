@@ -1,41 +1,65 @@
 import { Injectable } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
-import { trafficLights } from './lights';
+import { trafficLights, TrafficLight } from './lights';
 
 @Injectable()
 export class AppService {
   constructor(private readonly httpService: HttpService) { }
 
-  async calculateSpeed(userLat: number, userLng: number, lightId: number) {
-    try {
-      const targetLight = trafficLights.find(l => l.id === lightId);
+  private getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
+    const R = 6371e3;
+    const p1 = lat1 * Math.PI / 180;
+    const p2 = lat2 * Math.PI / 180;
+    const dp = (lat2 - lat1) * Math.PI / 180;
+    const dl = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dp / 2) * Math.sin(dp / 2) + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) * Math.sin(dl / 2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
 
-      if (!targetLight) {
-        return { error: 'Місце не знайдено' };
+  async calculateSpeed(userLat: number, userLng: number, destLat: number, destLng: number) {
+    try {
+      const url = `http://router.project-osrm.org/route/v1/driving/${userLng},${userLat};${destLng},${destLat}?overview=full&geometries=geojson`;
+      const response = await firstValueFrom(this.httpService.get(url));
+      const routeData = response.data.routes[0];
+      const coords = routeData.geometry.coordinates;
+
+      let lightOnRoute: TrafficLight | null = null;
+      for (const light of trafficLights) {
+        const isNear = coords.some((coord: number[]) => this.getDistance(coord[1], coord[0], light.lat, light.lng) < 20);
+        if (isNear) {
+          lightOnRoute = light;
+          break;
+        }
       }
 
-      const url = `http://router.project-osrm.org/route/v1/driving/${userLng},${userLat};${targetLight.lng},${targetLight.lat}?overview=false`;
-      const response = await firstValueFrom(this.httpService.get(url));
-      const finalDistance = response.data.routes[0].distance;
+      if (!lightOnRoute) {
+        return {
+          hasLight: false,
+          routeCoords: coords,
+          distanceMeters: Math.round(routeData.distance)
+        };
+      }
+
+      const lightUrl = `http://router.project-osrm.org/route/v1/driving/${userLng},${userLat};${lightOnRoute.lng},${lightOnRoute.lat}?overview=false`;
+      const lightRes = await firstValueFrom(this.httpService.get(lightUrl));
+      const distanceToLight = lightRes.data.routes[0].distance;
 
       const now = Date.now();
-      const cycle = (targetLight.green + targetLight.red) * 1000;
-      const elapsed = (now - targetLight.start) % cycle;
-      const isGreen = elapsed < targetLight.green * 1000;
-
-      const timeLeft = isGreen
-        ? (targetLight.green * 1000 - elapsed) / 1000
-        : (cycle - elapsed) / 1000;
-
-      const speedMps = finalDistance / timeLeft;
+      const cycle = (lightOnRoute.green + lightOnRoute.red) * 1000;
+      const elapsed = (now - lightOnRoute.start) % cycle;
+      const isGreen = elapsed < lightOnRoute.green * 1000;
+      const timeLeft = isGreen ? (lightOnRoute.green * 1000 - elapsed) / 1000 : (cycle - elapsed) / 1000;
+      const speedMps = distanceToLight / timeLeft;
 
       return {
-        distanceMeters: Math.round(finalDistance),
+        hasLight: true,
+        routeCoords: coords,
+        distanceMeters: Math.round(distanceToLight),
         phase: isGreen ? 'GREEN' : 'RED',
         timeLeft: Math.round(timeLeft),
         recommendedSpeedKmh: Math.round(speedMps * 3.6),
-        targetLight: { lat: targetLight.lat, lng: targetLight.lng }
+        targetLight: lightOnRoute
       };
 
     } catch (error) {

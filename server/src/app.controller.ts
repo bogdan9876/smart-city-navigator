@@ -9,8 +9,9 @@ export class AppController {
   async getAdvice(
     @Query('lat') lat: string,
     @Query('lng') lng: string,
-    @Query('lightId') lightId: string
+    @Query('destLat') destLat: string,
+    @Query('destLng') destLng: string
   ) {
-    return this.appService.calculateSpeed(Number(lat), Number(lng), Number(lightId));
+    return this.appService.calculateSpeed(Number(lat), Number(lng), Number(destLat), Number(destLng));
   }
 }
