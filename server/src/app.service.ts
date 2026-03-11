@@ -25,12 +25,18 @@ export class AppService {
       const coords = routeData.geometry.coordinates;
 
       let lightOnRoute: TrafficLight | null = null;
+      let lightIndex = -1;
+
       for (const light of trafficLights) {
-        const isNear = coords.some((coord: number[]) => this.getDistance(coord[1], coord[0], light.lat, light.lng) < 20);
-        if (isNear) {
-          lightOnRoute = light;
-          break;
+        for (let i = 0; i < coords.length; i++) {
+          const isNear = this.getDistance(coords[i][1], coords[i][0], light.lat, light.lng) < 60;
+          if (isNear) {
+            lightOnRoute = light;
+            lightIndex = i;
+            break;
+          }
         }
+        if (lightOnRoute) break;
       }
 
       if (!lightOnRoute) {
@@ -41,15 +47,17 @@ export class AppService {
         };
       }
 
-      const lightUrl = `http://router.project-osrm.org/route/v1/driving/${userLng},${userLat};${lightOnRoute.lng},${lightOnRoute.lat}?overview=false`;
-      const lightRes = await firstValueFrom(this.httpService.get(lightUrl));
-      const distanceToLight = lightRes.data.routes[0].distance;
+      let distanceToLight = 0;
+      for (let i = 0; i < lightIndex; i++) {
+        distanceToLight += this.getDistance(coords[i][1], coords[i][0], coords[i + 1][1], coords[i + 1][0]);
+      }
 
       const now = Date.now();
       const cycle = (lightOnRoute.green + lightOnRoute.red) * 1000;
       const elapsed = (now - lightOnRoute.start) % cycle;
       const isGreen = elapsed < lightOnRoute.green * 1000;
       const timeLeft = isGreen ? (lightOnRoute.green * 1000 - elapsed) / 1000 : (cycle - elapsed) / 1000;
+
       const speedMps = distanceToLight / timeLeft;
 
       return {
