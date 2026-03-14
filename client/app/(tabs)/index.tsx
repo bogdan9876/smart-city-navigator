@@ -26,8 +26,7 @@ export default function HomeScreen() {
     const getRoadData = async () => {
       try {
         console.log(`ПОЧАТОК: Ти натиснув на кнопку "${dest.name}"`);
-
-        const url = `http://192.168.1.55:3000/traffic/advice?lat=${userLoc.latitude}&lng=${userLoc.longitude}&destLat=${dest.lat}&destLng=${dest.lng}`;
+        const url = `http://192.168.1.96:3000/traffic/advice?lat=${userLoc.latitude}&lng=${userLoc.longitude}&destLat=${dest.lat}&destLng=${dest.lng}`;
         console.log("ВІДПРАВЛЯЮ ЗАПИТ НА БЕКЕНД");
 
         const res = await axios.get(url);
@@ -63,7 +62,7 @@ export default function HomeScreen() {
     const light = advice.targetLight;
     const distance = advice.distanceMeters;
 
-    const timer = setInterval(() => {
+    const updateTrafficData = () => {
       const now = Date.now();
       const cycle = (light.green + light.red) * 1000;
       const elapsed = (now - light.start) % cycle;
@@ -80,7 +79,11 @@ export default function HomeScreen() {
         timeLeft: Math.round(timeLeft),
         speed: Math.round(speedMps * 3.6)
       });
-    }, 2000);
+    };
+
+    updateTrafficData();
+
+    const timer = setInterval(updateTrafficData, 2000);
 
     return () => clearInterval(timer);
   }, [advice]);
@@ -92,22 +95,18 @@ export default function HomeScreen() {
       <MapView style={styles.map} initialRegion={{ ...userLoc, latitudeDelta: 0.04, longitudeDelta: 0.04 }}>
         <UrlTile urlTemplate="https://a.tile.openstreetmap.org/{z}/{x}/{y}.png" maximumZ={19} />
         <Marker coordinate={userLoc} title="Моє авто" pinColor="blue" />
-
         {selectedDest && (
           <Marker coordinate={{ latitude: selectedDest.lat, longitude: selectedDest.lng }} title={selectedDest.name} pinColor="purple" />
         )}
-
         {advice?.hasLight && advice?.targetLight && (
           <Marker
             coordinate={{ latitude: advice.targetLight.lat, longitude: advice.targetLight.lng }}
             title="Світлофор на шляху"
-            pinColor={advice.phase === 'GREEN' ? 'green' : 'red'}
+            pinColor={liveTrafficData?.phase === 'GREEN' ? 'green' : 'red'}
           />
         )}
-
         {route.length > 0 && <Polyline coordinates={route} strokeColor="blue" strokeWidth={4} />}
       </MapView>
-
       <View style={styles.panel}>
         <View style={styles.buttonsRow}>
           {DESTINATIONS.map(dest => (
@@ -127,14 +126,43 @@ export default function HomeScreen() {
           <Text style={{ fontSize: 18, color: 'red', textAlign: 'center', fontWeight: 'bold' }}>
             {advice.error}
           </Text>
-        ) : advice?.hasLight && liveTrafficData ? (
-          <>
-            <Text style={styles.text}>До світлофора: {advice.distanceMeters} м</Text>
-            <Text style={styles.text}>Фаза: {liveTrafficData.phase} ({liveTrafficData.timeLeft} сек)</Text>
-            <Text style={styles.speed}>Рекомендовано: {liveTrafficData.speed} км/год</Text>
-          </>
+        ) : advice?.hasLight ? (
+          liveTrafficData ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', marginTop: 10 }}>
+              <View style={{ padding: 10 }}> 
+                <View style={styles.trafficLightBody}>
+                  <View style={styles.lensBox}>
+                    <View style={[styles.lens, liveTrafficData.phase === 'RED' ? styles.redOn : styles.redOff]} />
+                  </View>
+                  <View style={styles.lensBox}>
+                    <View style={[styles.lens, styles.yellowOff]} />
+                  </View>
+                  <View style={[styles.lensBox, { marginBottom: 0 }]}>
+                    <View style={[styles.lens, liveTrafficData.phase === 'GREEN' ? styles.greenOn : styles.greenOff]} />
+                  </View>
+                </View>
+              </View>
+
+              <View style={{ flex: 1, paddingLeft: 15 }}>
+                <Text style={styles.text}>До перехрестя: {advice.distanceMeters} м</Text>
+                <Text style={{ 
+                  fontSize: 45, 
+                  fontWeight: 'bold', 
+                  color: liveTrafficData.phase === 'GREEN' ? '#2ecc71' : '#e74c3c' 
+                }}>
+                  {liveTrafficData.timeLeft} сек
+                </Text>
+                <Text style={styles.text}>Тримай швидкість:</Text>
+                <Text style={styles.speed}>{liveTrafficData.speed} км/год</Text>
+              </View>
+            </View>
+          ) : (
+            <Text style={styles.text}>Синхронізація зі світлофором...</Text>
+          )
         ) : advice?.routeCoords ? (
           <Text style={styles.speed}>Світлофорів на шляху немає. Гарної поїздки!</Text>
+        ) : selectedDestId ? (
+          <Text style={styles.text}>Будую маршрут...</Text>
         ) : (
           <Text style={styles.text}>Оберіть пункт призначення зверху</Text>
         )}
@@ -153,5 +181,58 @@ const styles = StyleSheet.create({
   textInactive: { color: 'black' },
   textActive: { color: 'white', fontWeight: 'bold' },
   text: { fontSize: 18 },
-  speed: { fontSize: 20, fontWeight: 'bold', marginTop: 10, color: '#2ecc71', textAlign: 'center' }
+  speed: { fontSize: 20, fontWeight: 'bold', marginTop: 10, color: '#2ecc71', textAlign: 'center' },
+  trafficLightBody: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 15,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#333',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.8,
+    shadowRadius: 5,
+    elevation: 10,
+  },
+  lensBox: {
+    backgroundColor: '#0a0a0a',
+    padding: 6,
+    borderRadius: 5,
+    marginBottom: 5,
+    borderWidth: 1,
+    borderColor: '#2a2a2a',
+  },
+  lens: {
+    width: 45,
+    height: 45,
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.6)',
+  },
+  redOff: { backgroundColor: '#4a0000' },
+  redOn: {
+    backgroundColor: '#ff1a1a',
+    shadowColor: '#ff1a1a',
+    shadowRadius: 15,
+    shadowOpacity: 1,
+    elevation: 20
+  },
+  yellowOff: { backgroundColor: '#4a3b00' },
+  yellowOn: {
+    backgroundColor: '#ffcc00',
+    shadowColor: '#ffcc00',
+    shadowRadius: 15,
+    shadowOpacity: 1,
+    elevation: 20
+  },
+  greenOff: { backgroundColor: '#003300' },
+  greenOn: {
+    backgroundColor: '#00ff00',
+    shadowColor: '#00ff00',
+    shadowRadius: 15,
+    shadowOpacity: 1,
+    elevation: 20
+  },
 });
