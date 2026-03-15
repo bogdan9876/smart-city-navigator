@@ -23,6 +23,8 @@ export class AppService {
       const response = await firstValueFrom(this.httpService.get(url));
       const routeData = response.data.routes[0];
       const coords = routeData.geometry.coordinates;
+      
+      const totalDistanceMeters = Math.round(routeData.distance);
 
       let lightOnRoute: TrafficLight | null = null;
       let lightIndex = -1;
@@ -43,7 +45,7 @@ export class AppService {
         return {
           hasLight: false,
           routeCoords: coords,
-          distanceMeters: Math.round(routeData.distance)
+          totalDistance: totalDistanceMeters 
         };
       }
 
@@ -58,11 +60,13 @@ export class AppService {
       const isGreen = elapsed < lightOnRoute.green * 1000;
       const timeLeft = isGreen ? (lightOnRoute.green * 1000 - elapsed) / 1000 : (cycle - elapsed) / 1000;
 
-      const speedMps = distanceToLight / timeLeft;
+      const speedMps = distanceToLight / Math.max(timeLeft, 1);
 
       return {
         hasLight: true,
         routeCoords: coords,
+        totalDistance: totalDistanceMeters,
+        distanceToLight: Math.round(distanceToLight),
         distanceMeters: Math.round(distanceToLight),
         phase: isGreen ? 'GREEN' : 'RED',
         timeLeft: Math.round(timeLeft),
