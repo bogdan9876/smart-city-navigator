@@ -1,52 +1,33 @@
+import axios from 'axios';
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, Keyboard } from 'react-native';
+import { StyleSheet, View, Keyboard, Text, ActivityIndicator } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import Dashboard from '@/components/Dashboard';
 import SearchScreen from '@/components/SearchScreen';
-import axios from 'axios';
+import { useLocation } from '@/hooks/useLocation';
+import { useTrafficLight } from '@/hooks/useTrafficLight';
+import { getBearing } from '@/utils/locationUtils';
 
 export default function HomeScreen() {
   const mapRef = useRef<MapView>(null);
-
+  const { userLoc, errorMsg } = useLocation();
   const [route, setRoute] = useState<any[]>([]);
   const [advice, setAdvice] = useState<any>(null);
   const [destination, setDestination] = useState<{ name: string, lat: number, lng: number } | null>(null);
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [isDrivingMode, setIsDrivingMode] = useState(false);
-  const [liveTrafficData, setLiveTrafficData] = useState<{ phase: string, timeLeft: number, speed: number } | null>(null);
 
-  const userLoc = { latitude: 49.8450, longitude: 24.0250 };
-
-  const getBearing = (start: { latitude: number, longitude: number }, end: { latitude: number, longitude: number }) => {
-    const toRad = (val: number) => (val * Math.PI) / 180;
-    const toDeg = (val: number) => (val * 180) / Math.PI;
-
-    const lat1 = toRad(start.latitude);
-    const lon1 = toRad(start.longitude);
-    const lat2 = toRad(end.latitude);
-    const lon2 = toRad(end.longitude);
-
-    const y = Math.sin(lon2 - lon1) * Math.cos(lat2);
-    const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(lon2 - lon1);
-
-    const bearing = toDeg(Math.atan2(y, x));
-    return (bearing + 360) % 360;
-  };
+  const liveTrafficData = useTrafficLight(advice);
 
   const clearRoute = () => {
     setDestination(null);
     setRoute([]);
     setAdvice(null);
-    setLiveTrafficData(null);
     setIsDrivingMode(false);
 
-    if (mapRef.current) {
+    if (mapRef.current && userLoc) {
       mapRef.current.animateCamera({
-        center: userLoc,
-        pitch: 0,
-        heading: 0,
-        altitude: 4000,
-        zoom: 14,
+        center: userLoc, pitch: 0, heading: 0, altitude: 4000, zoom: 14,
       }, { duration: 1000 });
     }
   };
@@ -60,6 +41,7 @@ export default function HomeScreen() {
 
   const handleStartDrive = () => {
     setIsDrivingMode(true);
+    if (!userLoc) return;
 
     let heading = 0;
     if (route.length > 1) {
@@ -70,17 +52,13 @@ export default function HomeScreen() {
 
     if (mapRef.current) {
       mapRef.current.animateCamera({
-        center: userLoc,
-        pitch: 60,
-        heading: heading,
-        altitude: 300,
-        zoom: 17.5,
+        center: userLoc, pitch: 60, heading: heading, altitude: 300, zoom: 17.5,
       }, { duration: 1500 });
     }
   };
 
   useEffect(() => {
-    if (!destination) return;
+    if (!destination || !userLoc) return;
     const getRoadData = async () => {
       try {
         const url = `http://192.168.1.55:3000/traffic/advice?lat=${userLoc.latitude}&lng=${userLoc.longitude}&destLat=${destination.lat}&destLng=${destination.lng}`;
@@ -96,29 +74,15 @@ export default function HomeScreen() {
     getRoadData();
   }, [destination]);
 
-  useEffect(() => {
-    if (!advice || !advice.hasLight || !advice.targetLight) return setLiveTrafficData(null);
-
-    const light = advice.targetLight;
-    const distance = advice.distanceMeters;
-
-    const updateTrafficData = () => {
-      const now = Date.now();
-      const cycle = (light.green + light.red) * 1000;
-      const elapsed = (now - light.start) % cycle;
-      const isGreen = elapsed < light.green * 1000;
-      const timeLeft = isGreen ? (light.green * 1000 - elapsed) / 1000 : (cycle - elapsed) / 1000;
-      setLiveTrafficData({
-        phase: isGreen ? 'GREEN' : 'RED',
-        timeLeft: Math.round(timeLeft),
-        speed: Math.round((distance / timeLeft) * 3.6)
-      });
-    };
-
-    updateTrafficData();
-    const timer = setInterval(updateTrafficData, 1000);
-    return () => clearInterval(timer);
-  }, [advice]);
+  if (!userLoc) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#ecf0f1' }]}>
+        <ActivityIndicator size="large" color="#3498db" />
+        <Text style={{ marginTop: 20, fontSize: 18, fontWeight: 'bold', color: '#2c3e50' }}>Шукаємо супутники GPS...</Text>
+        {errorMsg && <Text style={{ color: 'red', marginTop: 10 }}>{errorMsg}</Text>}
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -158,10 +122,7 @@ export default function HomeScreen() {
       )}
 
       {isSearchActive && (
-        <SearchScreen
-          onClose={() => setIsSearchActive(false)}
-          onSelect={handleSelectPlace}
-        />
+        <SearchScreen onClose={() => setIsSearchActive(false)} onSelect={handleSelectPlace} />
       )}
     </View>
   );
