@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, TextInput, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, ScrollView } from 'react-native';
 import axios from 'axios';
 
 export default function SearchScreen({ onClose, onSelect }: { onClose: () => void, onSelect: (place: any) => void }) {
@@ -42,51 +42,46 @@ export default function SearchScreen({ onClose, onSelect }: { onClose: () => voi
     };
 
     return (
-        <View style={styles.searchOverlay}>
-            <View style={styles.searchHeader}>
-                <TouchableOpacity onPress={onClose} style={styles.backButton}>
-                    <Text style={styles.backButtonText}>←</Text>
+        <View className="absolute inset-0 bg-white z-50 pt-12 px-5">
+            <View className="flex-row items-center mb-4">
+                <TouchableOpacity onPress={onClose} className="p-2 mr-2">
+                    <Text className="text-2xl text-brand-slate font-bold">←</Text>
                 </TouchableOpacity>
-
-                <View style={styles.activeInputContainer}>
+                <View className="flex-1 flex-row items-center justify-center bg-brand-light rounded-xl h-14">
                     <TextInput
-                        style={styles.activeInput}
+                        className="flex-1 p-4 h-full text-lg text-brand-dark"
                         placeholder="Введіть адресу у Львові..."
                         placeholderTextColor="#7f8c8d"
                         value={searchQuery}
                         onChangeText={setSearchQuery}
                         autoFocus={true}
+                        autoCorrect={true}
+                        spellCheck={false}
                     />
-                    {searchQuery.length > 0 && (
-                        <TouchableOpacity style={styles.clearTextButton} onPress={() => { setSearchQuery(''); setPlaces([]); }}>
-                            <Text style={styles.clearButtonText}>✕</Text>
-                        </TouchableOpacity>
-                    )}
+                    <View className="w-12 h-full items-center justify-center">
+                        {searchQuery.length > 0 && (
+                            <TouchableOpacity
+                                className="flex-1 w-full items-center justify-center"
+                                onPress={() => { setSearchQuery(''); setPlaces([]); }}
+                            >
+                                <Text className="text-xl text-brand-muted font-bold">✕</Text>
+                            </TouchableOpacity>
+                        )}
+                    </View>
                 </View>
             </View>
-
             <ScrollView keyboardShouldPersistTaps="handled">
                 {places.map((place, index) => (
-                    <TouchableOpacity key={index} style={styles.suggestionItem} onPress={() => onSelect({ name: formatPlaceName(place), lat: parseFloat(place.lat), lng: parseFloat(place.lon) })}>
-                        <Text style={styles.suggestionTitle}>{formatPlaceName(place)}</Text>
-                        <Text style={styles.suggestionSub}>{place.display_name}</Text>
+                    <TouchableOpacity
+                        key={index}
+                        className="py-4 border-b border-brand-light"
+                        onPress={() => onSelect({ name: formatPlaceName(place), lat: parseFloat(place.lat), lng: parseFloat(place.lon) })}
+                    >
+                        <Text className="text-lg font-bold text-brand-dark">{formatPlaceName(place)}</Text>
+                        <Text className="text-sm text-brand-muted mt-1">{place.display_name}</Text>
                     </TouchableOpacity>
                 ))}
             </ScrollView>
         </View>
     );
 }
-
-const styles = StyleSheet.create({
-    searchOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'white', zIndex: 999, paddingTop: 50, paddingHorizontal: 20 },
-    searchHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 15 },
-    backButton: { padding: 10, marginRight: 10 },
-    backButtonText: { fontSize: 24, color: '#34495e', fontWeight: 'bold' },
-    activeInputContainer: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#ecf0f1', borderRadius: 10, paddingRight: 10 },
-    activeInput: { flex: 1, padding: 15, fontSize: 18 },
-    clearTextButton: { padding: 10 },
-    clearButtonText: { fontSize: 20, color: '#7f8c8d', fontWeight: 'bold' },
-    suggestionItem: { paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#ecf0f1' },
-    suggestionTitle: { fontSize: 18, fontWeight: 'bold', color: '#2c3e50' },
-    suggestionSub: { fontSize: 14, color: '#7f8c8d', marginTop: 4 },
-});

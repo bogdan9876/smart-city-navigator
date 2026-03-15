@@ -1,12 +1,12 @@
-import axios from 'axios';
-import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, Keyboard, Text, ActivityIndicator } from 'react-native';
-import MapView, { Marker, Polyline } from 'react-native-maps';
+import { fetchRouteAdvice } from '@/api/trafficApi';
 import Dashboard from '@/components/Dashboard';
 import SearchScreen from '@/components/SearchScreen';
 import { useLocation } from '@/hooks/useLocation';
 import { useTrafficLight } from '@/hooks/useTrafficLight';
 import { getBearing } from '@/utils/locationUtils';
+import React, { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Keyboard, Text, View } from 'react-native';
+import MapView, { Marker, Polyline } from 'react-native-maps';
 
 export default function HomeScreen() {
   const mapRef = useRef<MapView>(null);
@@ -59,62 +59,54 @@ export default function HomeScreen() {
 
   useEffect(() => {
     if (!destination || !userLoc) return;
-    const getRoadData = async () => {
-      try {
-        const url = `${process.env.EXPO_PUBLIC_API_URL}/traffic/advice?lat=${userLoc.latitude}&lng=${userLoc.longitude}&destLat=${destination.lat}&destLng=${destination.lng}`;
-        const res = await axios.get(url);
-        setAdvice(res.data);
-        if (res.data.routeCoords) {
-          const newRoute = res.data.routeCoords.map((c: any) => ({ latitude: c[1], longitude: c[0] }));
-          setRoute(newRoute);
 
-          if (mapRef.current) {
-            mapRef.current.animateCamera({ pitch: 0, heading: 0 }, { duration: 500 });
-          }
+    const getRoadData = async () => {
+      const data = await fetchRouteAdvice(userLoc, destination);
+      if (!data) return;
+
+      setAdvice(data);
+      if (data.routeCoords) {
+        const newRoute = data.routeCoords.map((c: any) => ({ latitude: c[1], longitude: c[0] }));
+        setRoute(newRoute);
+
+        if (mapRef.current) {
+          mapRef.current.animateCamera({ pitch: 0, heading: 0 }, { duration: 500 });
 
           setTimeout(() => {
             if (mapRef.current) {
               mapRef.current.fitToCoordinates(newRoute, {
-                edgePadding: {
-                  top: 50,
-                  right: 50,
-                  bottom: 100,
-                  left: 50
-                },
+                edgePadding: { top: 50, right: 50, bottom: 100, left: 50 },
                 animated: true,
               });
             }
           }, 1000);
         }
-      } catch (error: any) {
-        console.error("Помилка зв'язку з бекендом:", error.message);
       }
     };
+
     getRoadData();
   }, [destination]);
 
   if (!userLoc) {
     return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#ecf0f1' }]}>
+      <View className="flex-1 justify-center items-center bg-brand-light">
         <ActivityIndicator size="large" color="#3498db" />
-        <Text style={{ marginTop: 20, fontSize: 18, fontWeight: 'bold', color: '#2c3e50' }}>Шукаємо супутники GPS...</Text>
-        {errorMsg && <Text style={{ color: 'red', marginTop: 10 }}>{errorMsg}</Text>}
+        <Text className="mt-5 text-lg font-bold text-brand-dark">Шукаємо супутники GPS...</Text>
+        {errorMsg && <Text className="mt-2.5 text-brand-danger">{errorMsg}</Text>}
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View className="flex-1">
       <MapView
         ref={mapRef}
-        style={styles.map}
+        style={{ flex: 1 }} // <--- ОСЬ ТУТ ФІКС! Карта вимагає style-проп.
         mapType="mutedStandard"
         initialRegion={{ ...userLoc, latitudeDelta: 0.04, longitudeDelta: 0.04 }}
       >
         <Marker coordinate={userLoc} title="Моє авто" pinColor="blue" />
-
         {destination && <Marker coordinate={{ latitude: destination.lat, longitude: destination.lng }} title={destination.name} pinColor="purple" />}
-
         {advice?.hasLight && advice?.targetLight && (
           <Marker
             coordinate={{ latitude: advice.targetLight.lat, longitude: advice.targetLight.lng }}
@@ -122,7 +114,6 @@ export default function HomeScreen() {
             pinColor={liveTrafficData?.phase === 'GREEN' ? 'green' : 'red'}
           />
         )}
-
         {route.length > 0 && <Polyline coordinates={route} strokeColor="#3498db" strokeWidth={5} />}
       </MapView>
 
@@ -144,8 +135,3 @@ export default function HomeScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  map: { flex: 1 },
-});
