@@ -65,7 +65,26 @@ export default function HomeScreen() {
         const res = await axios.get(url);
         setAdvice(res.data);
         if (res.data.routeCoords) {
-          setRoute(res.data.routeCoords.map((c: any) => ({ latitude: c[1], longitude: c[0] })));
+          const newRoute = res.data.routeCoords.map((c: any) => ({ latitude: c[1], longitude: c[0] }));
+          setRoute(newRoute);
+
+          if (mapRef.current) {
+            mapRef.current.animateCamera({ pitch: 0, heading: 0 }, { duration: 500 });
+          }
+
+          setTimeout(() => {
+            if (mapRef.current) {
+              mapRef.current.fitToCoordinates(newRoute, {
+                edgePadding: {
+                  top: 50,
+                  right: 50,
+                  bottom: 100,
+                  left: 50
+                },
+                animated: true,
+              });
+            }
+          }, 1000);
         }
       } catch (error: any) {
         console.error("Помилка зв'язку з бекендом:", error.message);
@@ -90,8 +109,6 @@ export default function HomeScreen() {
         ref={mapRef}
         style={styles.map}
         mapType="mutedStandard"
-        showsCompass={false}
-        showsBuildings={true}
         initialRegion={{ ...userLoc, latitudeDelta: 0.04, longitudeDelta: 0.04 }}
       >
         <Marker coordinate={userLoc} title="Моє авто" pinColor="blue" />
