@@ -61,7 +61,7 @@ export default function HomeScreen() {
     if (!destination || !userLoc) return;
     const getRoadData = async () => {
       try {
-        const url = `http://192.168.1.55:3000/traffic/advice?lat=${userLoc.latitude}&lng=${userLoc.longitude}&destLat=${destination.lat}&destLng=${destination.lng}`;
+        const url = `${process.env.EXPO_PUBLIC_API_URL}/traffic/advice?lat=${userLoc.latitude}&lng=${userLoc.longitude}&destLat=${destination.lat}&destLng=${destination.lng}`;
         const res = await axios.get(url);
         setAdvice(res.data);
         if (res.data.routeCoords) {
