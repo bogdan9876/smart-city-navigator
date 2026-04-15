@@ -10,7 +10,6 @@
     "skipLibCheck": true,
     "strictNullChecks": true,
     "outDir": "./dist",
-    "baseUrl": "./",
     "incremental": true,
     "allowJs": true
   },
