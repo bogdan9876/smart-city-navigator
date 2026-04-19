@@ -1,8 +1,9 @@
 import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import TrafficLight from './TrafficLight';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-export default function Dashboard({ destination, advice, liveTrafficData, onOpenSearch, onClearRoute, isDrivingMode, onStartDrive }: any) {
+export default function Dashboard({ destination, advice, liveTrafficData, onOpenSearch, onClearRoute, onSaveFavorite, isFavorite, isDrivingMode, onStartDrive }: any) {
     return (
         <View
             className="p-5 bg-white pb-10 rounded-t-2xl shadow-sm"
@@ -16,9 +17,14 @@ export default function Dashboard({ destination, advice, liveTrafficData, onOpen
                 </TouchableOpacity>
 
                 {destination && (
-                    <TouchableOpacity className="p-1 ml-2.5" onPress={onClearRoute}>
-                        <Text className="text-xl text-brand-muted font-bold">✕</Text>
-                    </TouchableOpacity>
+                    <View className="flex-row items-center">
+                        <TouchableOpacity className="p-1 ml-2" onPress={onSaveFavorite}>
+                            <MaterialCommunityIcons name={isFavorite ? "star" : "star-outline"} size={28} color="#FFB800" />
+                        </TouchableOpacity>
+                        <TouchableOpacity className="p-1 ml-2.5" onPress={onClearRoute}>
+                            <Text className="text-xl text-brand-muted font-bold">✕</Text>
+                        </TouchableOpacity>
+                    </View>
                 )}
             </View>
             {!destination && (
