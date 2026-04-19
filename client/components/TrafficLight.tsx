@@ -2,25 +2,27 @@ import React from 'react';
 import { View } from 'react-native';
 
 export default function TrafficLight({ phase }: { phase: string | undefined }) {
-    return (
-        <View className="bg-traffic-body rounded-2xl py-2.5 px-2 items-center border-2 border-traffic-border shadow-lg">
-            <View className="bg-traffic-box p-1.5 rounded-md mb-1.5 border border-traffic-boxBorder">
-                <View
-                    className={`w-11 h-11 rounded-full border border-black/60 ${phase === 'RED' ? 'bg-lens-red-on shadow-lens-red-on shadow-lg' : 'bg-lens-red-off'
-                        }`}
-                    style={phase === 'RED' ? { elevation: 20 } : {}}
-                />
-            </View>
-            <View className="bg-traffic-box p-1.5 rounded-md mb-1.5 border border-traffic-boxBorder">
-                <View className="w-11 h-11 rounded-full border border-black/60 bg-lens-yellow-off" />
-            </View>
-            <View className="bg-traffic-box p-1.5 rounded-md border border-traffic-boxBorder">
-                <View
-                    className={`w-11 h-11 rounded-full border border-black/60 ${phase === 'GREEN' ? 'bg-lens-green-on shadow-lens-green-on shadow-lg' : 'bg-lens-green-off'
-                        }`}
-                    style={phase === 'GREEN' ? { elevation: 20 } : {}}
-                />
-            </View>
-        </View>
-    );
+  const activeElevation = 8;
+  const inactiveElevation = 0;
+
+  return (
+    <View className="bg-traffic-body rounded-2xl py-4 px-3 items-center">
+      <View 
+        className={`w-10 h-10 rounded-full ${
+          phase === 'RED' ? 'bg-lens-red-on' : 'bg-traffic-boxBorder'
+        }`} 
+        style={{ elevation: phase === 'RED' ? activeElevation : inactiveElevation }}
+      />
+      <View 
+        className="w-10 h-10 rounded-full bg-traffic-boxBorder mt-2"
+        style={{ elevation: inactiveElevation }}
+      />
+      <View 
+        className={`w-10 h-10 rounded-full mt-2 ${
+          phase === 'GREEN' ? 'bg-lens-green-on' : 'bg-traffic-boxBorder'
+        }`} 
+        style={{ elevation: phase === 'GREEN' ? activeElevation : inactiveElevation }}
+      />
+    </View>
+  );
 }

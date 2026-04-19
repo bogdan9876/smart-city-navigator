@@ -42,14 +42,19 @@ export default function SearchScreen({ onClose, onSelect }: { onClose: () => voi
     };
 
     return (
-        <View className="absolute inset-0 bg-white z-50 pt-12 px-5">
+        <View className="absolute inset-0 bg-white z-50 pt-[60px] px-5">
             <View className="flex-row items-center mb-4">
                 <TouchableOpacity onPress={onClose} className="p-2 mr-2">
                     <Text className="text-2xl text-brand-slate font-bold">←</Text>
                 </TouchableOpacity>
                 <View className="flex-1 flex-row items-center justify-center bg-brand-light rounded-xl h-14">
                     <TextInput
-                        className="flex-1 p-4 h-full text-lg text-brand-dark"
+                        style={{
+                            flex: 1,
+                            fontSize: 16,
+                            color: '#2c3e50',
+                            paddingHorizontal: 16
+                        }}
                         placeholder="Введіть адресу у Львові..."
                         placeholderTextColor="#7f8c8d"
                         value={searchQuery}

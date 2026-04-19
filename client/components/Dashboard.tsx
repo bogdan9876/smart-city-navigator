@@ -33,7 +33,7 @@ export default function Dashboard({ destination, advice, liveTrafficData, onOpen
                     ) : advice ? (
                         <View>
                             <Text className="text-base text-brand-muted text-center mb-4 font-semibold">
-                                Маршрут готовий ({advice.distanceMeters} м)
+                                Маршрут готовий ({advice.totalDistance} м)
                             </Text>
                             <TouchableOpacity
                                 className="bg-brand-primary py-4 rounded-xl items-center shadow-lg shadow-brand-primary"
@@ -60,7 +60,7 @@ export default function Dashboard({ destination, advice, liveTrafficData, onOpen
                                 <View className="flex-1 pl-5 justify-center">
                                     <View className="flex-row justify-between items-baseline mb-1.5">
                                         <Text className="text-base text-brand-muted font-medium">Відстань:</Text>
-                                        <Text className="text-lg text-brand-dark font-bold">{advice.distanceMeters} м</Text>
+                                        <Text className="text-lg text-brand-dark font-bold">{advice.distanceToLight} м</Text>
                                     </View>
                                     <View className="flex-row justify-between items-baseline mb-1.5">
                                         <Text className="text-base text-brand-muted font-medium">Залишилось:</Text>

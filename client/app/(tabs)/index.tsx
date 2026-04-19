@@ -101,7 +101,7 @@ export default function HomeScreen() {
     <View className="flex-1">
       <MapView
         ref={mapRef}
-        style={{ flex: 1 }} // <--- ОСЬ ТУТ ФІКС! Карта вимагає style-проп.
+        style={{ flex: 1 }}
         mapType="mutedStandard"
         initialRegion={{ ...userLoc, latitudeDelta: 0.04, longitudeDelta: 0.04 }}
       >
