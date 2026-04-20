@@ -47,21 +47,48 @@ export class TrafficLightService {
     light: TrafficLight,
     distanceToLightMeters: number,
   ) {
+    const MAX_SPEED_KMH = 60;
     const now = Date.now();
-    const cycle = (light.green + light.red) * 1000;
-    const elapsed = (now - light.start) % cycle;
+    const cycleMs = (light.green + light.red) * 1000;
+    const elapsed = (now - light.start) % cycleMs;
     const isGreen = elapsed < light.green * 1000;
-    const timeLeft = isGreen
-      ? (light.green * 1000 - elapsed) / 1000
-      : (cycle - elapsed) / 1000;
 
-    const speedMps = distanceToLightMeters / timeLeft;
-    const recommendedSpeedKmh = Math.round(speedMps * 3.6);
+    type Window = { start: number; end: number };
+    const windows: Window[] = [];
 
+    if (isGreen) {
+      const remainingGreen = (light.green * 1000 - elapsed) / 1000;
+      windows.push({ start: 0, end: remainingGreen });
+      for (let n = 1; n <= 5; n++) {
+        const s = remainingGreen + light.red + (n - 1) * (light.green + light.red);
+        windows.push({ start: s, end: s + light.green });
+      }
+    } else {
+      const timeToGreen = (cycleMs - elapsed) / 1000;
+      for (let n = 0; n <= 5; n++) {
+        const s = timeToGreen + n * (light.green + light.red);
+        windows.push({ start: s, end: s + light.green });
+      }
+    }
+
+    for (const win of windows) {
+      const targetTime = win.start === 0 ? win.end : win.start;
+      const speedKmh = Math.round((distanceToLightMeters / targetTime) * 3.6);
+      if (speedKmh <= MAX_SPEED_KMH) {
+        return {
+          phase: isGreen ? 'GREEN' : 'RED',
+          timeLeft: Math.round(targetTime),
+          recommendedSpeedKmh: speedKmh,
+        };
+      }
+    }
+
+    const last = windows[windows.length - 1];
+    const fallbackTime = last.start === 0 ? last.end : last.start;
     return {
       phase: isGreen ? 'GREEN' : 'RED',
-      timeLeft: Math.round(timeLeft),
-      recommendedSpeedKmh,
+      timeLeft: Math.round(fallbackTime),
+      recommendedSpeedKmh: Math.min(MAX_SPEED_KMH, Math.round((distanceToLightMeters / fallbackTime) * 3.6)),
     };
   }
 }

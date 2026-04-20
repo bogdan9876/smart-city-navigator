@@ -23,10 +23,9 @@ export default function Dashboard({ destination, advice, liveTrafficData, traffi
         ?? (totalDistance != null ? Math.ceil((totalDistance / 1000) / 40 * 60) : undefined);
     return (
         <View
-            className="px-5 pt-3 pb-10 bg-brand-surface rounded-t-3xl border-t border-brand-border"
+            className="px-5 pt-3 pb-10 bg-brand-surface border-t border-brand-border"
             style={{ elevation: 15, shadowColor: '#000', shadowOffset: { width: 0, height: -3 }, shadowOpacity: 0.4 }}
         >
-            {/* Drag handle */}
             <View className="items-center mb-4">
                 <View className="w-10 h-1 rounded-full bg-brand-border" />
             </View>

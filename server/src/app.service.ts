@@ -54,13 +54,42 @@ export class AppService {
         distanceToLight += this.getDistance(coords[i][1], coords[i][0], coords[i + 1][1], coords[i + 1][0]);
       }
 
+      const MAX_SPEED_KMH = 60;
       const now = Date.now();
-      const cycle = (lightOnRoute.green + lightOnRoute.red) * 1000;
-      const elapsed = (now - lightOnRoute.start) % cycle;
+      const cycleMs = (lightOnRoute.green + lightOnRoute.red) * 1000;
+      const elapsed = (now - lightOnRoute.start) % cycleMs;
       const isGreen = elapsed < lightOnRoute.green * 1000;
-      const timeLeft = isGreen ? (lightOnRoute.green * 1000 - elapsed) / 1000 : (cycle - elapsed) / 1000;
 
-      const speedMps = distanceToLight / Math.max(timeLeft, 1);
+      type Window = { start: number; end: number };
+      const windows: Window[] = [];
+
+      if (isGreen) {
+        const remainingGreen = (lightOnRoute.green * 1000 - elapsed) / 1000;
+        windows.push({ start: 0, end: remainingGreen });
+        for (let n = 1; n <= 5; n++) {
+          const s = remainingGreen + lightOnRoute.red + (n - 1) * (lightOnRoute.green + lightOnRoute.red);
+          windows.push({ start: s, end: s + lightOnRoute.green });
+        }
+      } else {
+        const timeToGreen = (cycleMs - elapsed) / 1000;
+        for (let n = 0; n <= 5; n++) {
+          const s = timeToGreen + n * (lightOnRoute.green + lightOnRoute.red);
+          windows.push({ start: s, end: s + lightOnRoute.green });
+        }
+      }
+
+      let recommendedSpeedKmh = MAX_SPEED_KMH;
+      let targetTime = windows[windows.length - 1].start || windows[windows.length - 1].end;
+
+      for (const win of windows) {
+        const t = win.start === 0 ? win.end : win.start;
+        const kmh = Math.round((distanceToLight / t) * 3.6);
+        if (kmh <= MAX_SPEED_KMH) {
+          recommendedSpeedKmh = kmh;
+          targetTime = t;
+          break;
+        }
+      }
 
       return {
         hasLight: true,
@@ -69,8 +98,8 @@ export class AppService {
         distanceToLight: Math.round(distanceToLight),
         distanceMeters: Math.round(distanceToLight),
         phase: isGreen ? 'GREEN' : 'RED',
-        timeLeft: Math.round(timeLeft),
-        recommendedSpeedKmh: Math.round(speedMps * 3.6),
+        timeLeft: Math.round(targetTime),
+        recommendedSpeedKmh,
         targetLight: lightOnRoute
       };
 
