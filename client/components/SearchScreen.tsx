@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, TextInput, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, ScrollView, ActivityIndicator } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import axios from 'axios';
 
 export default function SearchScreen({ onClose, onSelect }: { onClose: () => void, onSelect: (place: any) => void }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedQuery, setDebouncedQuery] = useState('');
     const [places, setPlaces] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
         const timerId = setTimeout(() => setDebouncedQuery(searchQuery), 800);
@@ -15,6 +17,7 @@ export default function SearchScreen({ onClose, onSelect }: { onClose: () => voi
     useEffect(() => {
         const fetchPlaces = async () => {
             if (debouncedQuery.length < 3) return setPlaces([]);
+            setIsLoading(true);
             try {
                 const res = await axios.get('https://nominatim.openstreetmap.org/search', {
                     params: { q: `${debouncedQuery}, Львів`, format: 'json', limit: 6, addressdetails: 1 },
@@ -23,6 +26,8 @@ export default function SearchScreen({ onClose, onSelect }: { onClose: () => voi
                 setPlaces(res.data);
             } catch (error: any) {
                 console.error("Помилка пошуку:", error.message);
+            } finally {
+                setIsLoading(false);
             }
         };
         fetchPlaces();
@@ -41,22 +46,20 @@ export default function SearchScreen({ onClose, onSelect }: { onClose: () => voi
         return parts.length > 1 ? `${parts[0]}, ${parts[1]}`.trim() : (parts[0] || "");
     };
 
+    const isSearching = searchQuery !== debouncedQuery && searchQuery.length >= 3;
+    const showEmpty = !isLoading && !isSearching && debouncedQuery.length >= 3 && places.length === 0;
+
     return (
-        <View className="absolute inset-0 bg-white z-50 pt-[60px] px-5">
+        <View className="absolute inset-0 bg-brand-black z-50 pt-[60px] px-5">
             <View className="flex-row items-center mb-4">
                 <TouchableOpacity onPress={onClose} className="p-2 mr-2">
-                    <Text className="text-2xl text-brand-slate font-bold">←</Text>
+                    <MaterialCommunityIcons name="arrow-left" size={26} color="#FFFFFF" />
                 </TouchableOpacity>
-                <View className="flex-1 flex-row items-center justify-center bg-brand-light rounded-xl h-14">
+                <View className="flex-1 flex-row items-center bg-brand-input rounded-xl h-14 border border-brand-border">
                     <TextInput
-                        style={{
-                            flex: 1,
-                            fontSize: 16,
-                            color: '#2c3e50',
-                            paddingHorizontal: 16
-                        }}
+                        style={{ flex: 1, fontSize: 16, color: '#FFFFFF', paddingHorizontal: 16 }}
                         placeholder="Введіть адресу у Львові..."
-                        placeholderTextColor="#7f8c8d"
+                        placeholderTextColor="#999999"
                         value={searchQuery}
                         onChangeText={setSearchQuery}
                         autoFocus={true}
@@ -64,28 +67,45 @@ export default function SearchScreen({ onClose, onSelect }: { onClose: () => voi
                         spellCheck={false}
                     />
                     <View className="w-12 h-full items-center justify-center">
-                        {searchQuery.length > 0 && (
+                        {(isLoading || isSearching) ? (
+                            <ActivityIndicator size="small" color="#999999" />
+                        ) : searchQuery.length > 0 ? (
                             <TouchableOpacity
                                 className="flex-1 w-full items-center justify-center"
                                 onPress={() => { setSearchQuery(''); setPlaces([]); }}
                             >
-                                <Text className="text-xl text-brand-muted font-bold">✕</Text>
+                                <MaterialCommunityIcons name="close" size={20} color="#999999" />
                             </TouchableOpacity>
-                        )}
+                        ) : null}
                     </View>
                 </View>
             </View>
+
             <ScrollView keyboardShouldPersistTaps="handled">
                 {places.map((place, index) => (
                     <TouchableOpacity
                         key={index}
-                        className="py-4 border-b border-brand-light"
+                        className="flex-row items-center py-4 border-b border-brand-border"
                         onPress={() => onSelect({ name: formatPlaceName(place), lat: parseFloat(place.lat), lng: parseFloat(place.lon) })}
                     >
-                        <Text className="text-lg font-bold text-brand-dark">{formatPlaceName(place)}</Text>
-                        <Text className="text-sm text-brand-muted mt-1">{place.display_name}</Text>
+                        <View className="w-9 h-9 rounded-full bg-brand-card border border-brand-border items-center justify-center mr-3">
+                            <MaterialCommunityIcons name="map-marker-outline" size={18} color="#999999" />
+                        </View>
+                        <View className="flex-1">
+                            <Text className="text-base font-bold text-white" numberOfLines={1}>{formatPlaceName(place)}</Text>
+                            <Text className="text-xs text-brand-muted mt-0.5" numberOfLines={1}>{place.display_name}</Text>
+                        </View>
+                        <MaterialCommunityIcons name="chevron-right" size={18} color="#2C2C2C" />
                     </TouchableOpacity>
                 ))}
+
+                {showEmpty && (
+                    <View className="items-center mt-16">
+                        <MaterialCommunityIcons name="map-search-outline" size={48} color="#2C2C2C" />
+                        <Text className="text-white font-semibold text-lg mt-4">Нічого не знайдено</Text>
+                        <Text className="text-brand-muted text-sm mt-1 text-center">Спробуйте іншу адресу або назву місця</Text>
+                    </View>
+                )}
             </ScrollView>
         </View>
     );

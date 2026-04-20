@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
-import { trafficLights, TrafficLight } from './lights';
+import { TrafficLight, trafficLights } from './traffic/data/lights.data';
 
 @Injectable()
 export class AppService {
@@ -23,7 +23,7 @@ export class AppService {
       const response = await firstValueFrom(this.httpService.get(url));
       const routeData = response.data.routes[0];
       const coords = routeData.geometry.coordinates;
-      
+
       const totalDistanceMeters = Math.round(routeData.distance);
 
       let lightOnRoute: TrafficLight | null = null;
@@ -45,7 +45,7 @@ export class AppService {
         return {
           hasLight: false,
           routeCoords: coords,
-          totalDistance: totalDistanceMeters 
+          totalDistance: totalDistanceMeters
         };
       }
 

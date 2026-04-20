@@ -5,7 +5,8 @@ import 'react-native-reanimated';
 import "../global.css";
 import * as SecureStore from 'expo-secure-store';
 import { ClerkProvider, useAuth } from '@clerk/clerk-expo';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import AppSplash from '@/components/AppSplash';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
@@ -28,21 +29,24 @@ const InitialLayout = () => {
   const { isLoaded, isSignedIn } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  const [splashDone, setSplashDone] = useState(false);
+  const colorScheme = useColorScheme();
 
   useEffect(() => {
-    if (!isLoaded) return;
+    if (!isLoaded || !splashDone) return;
 
     const inAuthGroup = (segments[0] as string) === '(auth)';
 
     if (!isSignedIn && !inAuthGroup) {
       router.replace('/(auth)/sign-in' as any);
-    }
-    else if (isSignedIn && inAuthGroup) {
+    } else if (isSignedIn && inAuthGroup) {
       router.replace('/(tabs)' as any);
     }
-  }, [isSignedIn, isLoaded, segments, router]);
+  }, [isSignedIn, isLoaded, splashDone, segments, router]);
 
-  const colorScheme = useColorScheme();
+  if (!splashDone) {
+    return <AppSplash onDone={() => setSplashDone(true)} />;
+  }
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>

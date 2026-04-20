@@ -59,37 +59,43 @@ export default function SignInScreen() {
   }, [startOAuthFlow]);
 
   return (
-    <View className="flex-1 justify-center px-6 bg-slate-50">
-      <Text className="text-3xl font-bold text-slate-800 mb-8 text-center bg-white p-4 rounded-xl border border-gray-200">
-        Sign In
-      </Text>
+    <View className="flex-1 justify-center px-6 bg-brand-black">
+      <View className="items-center mb-10">
+        <View className="w-16 h-16 rounded-2xl bg-brand-card border border-brand-border items-center justify-center mb-4">
+          <MaterialCommunityIcons name="traffic-light" size={36} color="#00B14F" />
+        </View>
+        <Text className="text-3xl font-black text-white tracking-tight">Smart City</Text>
+        <Text className="text-brand-muted text-base mt-1">Navigator</Text>
+      </View>
 
       <TouchableOpacity
         onPress={onPressGoogle}
-        className="flex-row items-center justify-center bg-white py-4 rounded-xl mb-6 border border-gray-300 shadow-sm"
+        className="flex-row items-center justify-center bg-brand-card py-4 rounded-xl mb-6 border border-brand-border"
       >
         <MaterialCommunityIcons name="google" size={24} color="#DB4437" />
-        <Text className="ml-3 font-semibold text-lg text-gray-800">
+        <Text className="ml-3 font-semibold text-lg text-white">
           Continue with Google
         </Text>
       </TouchableOpacity>
 
       <View className="flex-row items-center mb-6">
-        <View className="flex-1 h-[1px] bg-gray-300" />
-        <Text className="mx-4 text-gray-500 font-medium">OR</Text>
-        <View className="flex-1 h-[1px] bg-gray-300" />
+        <View className="flex-1 h-[1px] bg-brand-border" />
+        <Text className="mx-4 text-brand-muted font-medium">OR</Text>
+        <View className="flex-1 h-[1px] bg-brand-border" />
       </View>
 
       <TextInput
         placeholder="Email"
-        className="w-full bg-white p-4 rounded-xl mb-4 border border-gray-200"
+        placeholderTextColor="#999999"
+        className="w-full bg-brand-input p-4 rounded-xl mb-4 border border-brand-border text-white"
         value={emailAddress}
         onChangeText={setEmailAddress}
         autoCapitalize="none"
       />
       <TextInput
         placeholder="Password"
-        className="w-full bg-white p-4 rounded-xl mb-6 border border-gray-200"
+        placeholderTextColor="#999999"
+        className="w-full bg-brand-input p-4 rounded-xl mb-6 border border-brand-border text-white"
         value={password}
         onChangeText={setPassword}
         secureTextEntry
@@ -97,9 +103,9 @@ export default function SignInScreen() {
 
       <TouchableOpacity
         onPress={onSignInPress}
-        className="bg-blue-600 py-4 rounded-xl items-center"
+        className="bg-brand-accent py-4 rounded-xl items-center"
       >
-        <Text className="text-white font-bold text-lg">Sign In</Text>
+        <Text className="text-brand-black font-bold text-lg">Sign In</Text>
       </TouchableOpacity>
     </View>
   );

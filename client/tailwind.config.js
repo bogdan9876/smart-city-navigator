@@ -7,20 +7,16 @@ module.exports = {
     extend: {
       colors: {
         brand: {
-          dark: '#2c3e50',
-          slate: '#34495e',
-          muted: '#7f8c8d',
-          light: '#ecf0f1',
-
-          primary: '#3498db',
-          success: '#2ecc71',
-          danger: '#e74c3c',
-          speed: '#27ae60',
-
-          widget: '#f8f9fa',
-          widgetBorder: '#e9ecef',
-          widgetMuted: '#95a5a6',
-          inputBorder: '#bdc3c7',
+          black: '#121212',    // --background
+          card: '#171717',     // --card
+          surface: '#1f1f1f',  // --muted
+          border: '#292929',   // --border
+          accent: '#fafafa',   // --secondary-foreground
+          green: '#008a50',    // --primary
+          muted: '#a2a2a2',    // --muted-foreground
+          input: '#242424',    // --input
+          popover: '#242424',  // --popover
+          destructive: '#961111', // --destructive
         },
         traffic: {
           body: '#1a1a1a',
@@ -32,6 +28,11 @@ module.exports = {
           red: { on: '#ff1a1a', off: '#4a0000' },
           yellow: { off: '#4a3b00' },
           green: { on: '#00ff00', off: '#003300' }
+        },
+        jam: {
+          normal: '#00B14F',
+          slow: '#FFB800',
+          heavy: '#FF3B30',
         }
       }
     },

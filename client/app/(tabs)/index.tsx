@@ -3,13 +3,22 @@ import Dashboard from '@/components/Dashboard';
 import SearchScreen from '@/components/SearchScreen';
 import { useLocation } from '@/hooks/useLocation';
 import { useTrafficLight } from '@/hooks/useTrafficLight';
+import { useRouteTraffic, TrafficLevel } from '@/hooks/useRouteTraffic';
 import { getBearing } from '@/utils/locationUtils';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { ActivityIndicator, Keyboard, Text, View, Image, TouchableOpacity, Alert } from 'react-native';
+import { ActivityIndicator, Keyboard, Text, View, Image, TouchableOpacity, Alert, Modal, TextInput } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import { useUser } from '@clerk/clerk-expo';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useApi } from '@/hooks/useApi';
+
+const TRAFFIC_COLORS: Record<TrafficLevel, string> = {
+    NORMAL: '#00B14F',
+    SLOW: '#FFB800',
+    TRAFFIC_JAM: '#FF3B30',
+};
+
+const COORD_EPSILON = 1e-5;
 
 export default function HomeScreen() {
   const mapRef = useRef<MapView>(null);
@@ -24,23 +33,31 @@ export default function HomeScreen() {
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [isDrivingMode, setIsDrivingMode] = useState(false);
   const [favorites, setFavorites] = useState<any[]>([]);
+  const [saveModalVisible, setSaveModalVisible] = useState(false);
+  const [saveModalName, setSaveModalName] = useState('');
 
   const liveTrafficData = useTrafficLight(advice);
+  const { data: trafficInfo, error: trafficError } = useRouteTraffic(userLoc, destination);
 
   const currentFavorite = destination ? favorites.find(f =>
-    (f.latitude === destination.lat && f.longitude === destination.lng) ||
-    f.originalAddress === destination.name ||
-    f.customName === destination.name
+    Math.abs(f.latitude - destination.lat) < COORD_EPSILON &&
+    Math.abs(f.longitude - destination.lng) < COORD_EPSILON
   ) : undefined;
 
   useFocusEffect(
     useCallback(() => {
       const fetchFavorites = async () => {
         try {
+          console.log('[favorites] → GET /favorites');
           const response = await api.get('/favorites');
-          setFavorites(response.data);
-        } catch (e) {
-          console.log('Failed to fetch favorites inside index');
+          console.log('[favorites] ← response', response.status, 'count:', Array.isArray(response.data) ? response.data.length : '?');
+          setFavorites(Array.isArray(response.data) ? response.data : []);
+        } catch (e: any) {
+          console.error('[favorites] ✗ fetch error', {
+            status: e?.response?.status,
+            data: e?.response?.data,
+            message: e?.message,
+          });
         }
       };
       if (user) {
@@ -72,10 +89,9 @@ export default function HomeScreen() {
     }
   };
 
-  const handleSaveFavorite = async () => {
+  const handleSaveFavorite = () => {
     if (!destination) return;
 
-    // Використовуємо нашу нову надійну змінну
     if (currentFavorite) {
       Alert.alert(
         "Видалити маршрут?",
@@ -88,7 +104,6 @@ export default function HomeScreen() {
             onPress: async () => {
               try {
                 await api.delete(`/favorites/${currentFavorite.id}`);
-                // Одразу оновлюємо стейт, щоб UI відреагував миттєво
                 setFavorites(prev => prev.filter(f => f.id !== currentFavorite.id));
               } catch (e) {
                 Alert.alert("Помилка", "Не вдалося видалити маршрут.");
@@ -100,21 +115,43 @@ export default function HomeScreen() {
       return;
     }
 
+    setSaveModalName(destination.name);
+    setSaveModalVisible(true);
+  };
+
+  const confirmSaveFavorite = async () => {
+    if (!destination) {
+      console.warn('[saveFavorite] aborted: no destination');
+      return;
+    }
+    const customName = saveModalName.trim() || destination.name;
+    const payload = {
+      customName,
+      originalAddress: destination.name,
+      latitude: destination.lat,
+      longitude: destination.lng,
+    };
+    console.log('[saveFavorite] → POST /favorites', payload);
+    setSaveModalVisible(false);
+
     try {
-      const resp = await api.post('/favorites', {
-        customName: destination.name,
-        originalAddress: destination.name,
-        latitude: destination.lat,
-        longitude: destination.lng,
-      });
-      setFavorites(prev => [...prev, resp.data]);
-      Alert.alert("Збережено!", "Цей маршрут успішно додано до ваших збережених.");
+      const resp = await api.post('/favorites', payload);
+      console.log('[saveFavorite] ← response', resp.status, resp.data);
+      if (resp.data && resp.data.id) {
+        setFavorites(prev => [...prev, resp.data]);
+      } else {
+        console.warn('[saveFavorite] response has no id', resp.data);
+      }
     } catch (e: any) {
-      console.log('Failed to save route:', e?.response?.data || e.message);
+      console.error('[saveFavorite] ✗ error', {
+        status: e?.response?.status,
+        data: e?.response?.data,
+        message: e?.message,
+      });
       if (e?.response?.status === 409) {
         Alert.alert("Увага", "Цей маршрут вже збережено.");
       } else {
-        Alert.alert("Помилка", "Не вдалося зберегти маршрут.");
+        Alert.alert("Помилка", `Не вдалося зберегти маршрут: ${e?.message ?? 'unknown'}`);
       }
     }
   };
@@ -148,15 +185,17 @@ export default function HomeScreen() {
     if (!destination || !userLoc) return;
 
     const getRoadData = async () => {
+      console.log('[advice] → fetchRouteAdvice', { userLoc, destination });
       const data = await fetchRouteAdvice(userLoc, destination);
+      console.log('[advice] ← response', data ? { hasLight: data.hasLight, error: data.error, coordsCount: data.routeCoords?.length } : 'null');
       if (!data) return;
 
       setAdvice(data);
-      if (data.routeCoords) {
+      if (data.routeCoords && Array.isArray(data.routeCoords)) {
         const newRoute = data.routeCoords.map((c: any) => ({ latitude: c[1], longitude: c[0] }));
         setRoute(newRoute);
 
-        if (mapRef.current) {
+        if (mapRef.current && newRoute.length > 0) {
           mapRef.current.animateCamera({ pitch: 0, heading: 0 }, { duration: 500 });
 
           setTimeout(() => {
@@ -176,10 +215,10 @@ export default function HomeScreen() {
 
   if (!userLoc) {
     return (
-      <View className="flex-1 justify-center items-center bg-brand-light">
-        <ActivityIndicator size="large" color="#3498db" />
-        <Text className="mt-5 text-lg font-bold text-brand-dark">Шукаємо супутники GPS...</Text>
-        {errorMsg && <Text className="mt-2.5 text-brand-danger">{errorMsg}</Text>}
+      <View className="flex-1 justify-center items-center bg-brand-black">
+        <ActivityIndicator size="large" color="#00B14F" />
+        <Text className="mt-5 text-lg font-bold text-white">Шукаємо супутники GPS...</Text>
+        {errorMsg && <Text className="mt-2.5 text-red-500">{errorMsg}</Text>}
       </View>
     );
   }
@@ -201,20 +240,50 @@ export default function HomeScreen() {
             pinColor={liveTrafficData?.phase === 'GREEN' ? 'green' : 'red'}
           />
         )}
-        {route.length > 0 && <Polyline coordinates={route} strokeColor="#3498db" strokeWidth={5} />}
+        {trafficInfo && trafficInfo.coords.length > 1 && trafficInfo.segments.length > 0 ? (
+          <>
+            <Polyline
+              coordinates={trafficInfo.coords}
+              strokeColor="rgba(0,0,0,0.35)"
+              strokeWidth={8}
+            />
+            {trafficInfo.segments.map((seg, i) => {
+              if (seg.coords.length < 2) return null;
+              return (
+                <Polyline
+                  key={`seg-${i}`}
+                  coordinates={seg.coords}
+                  strokeColor={TRAFFIC_COLORS[seg.level]}
+                  strokeWidth={5}
+                  zIndex={seg.level === 'TRAFFIC_JAM' ? 3 : seg.level === 'SLOW' ? 2 : 1}
+                />
+              );
+            })}
+            {trafficInfo.jamStart && (
+              <Marker
+                coordinate={trafficInfo.jamStart}
+                title="Затор попереду"
+                description={`+${trafficInfo.delayMinutes} хв затримки`}
+                pinColor="red"
+              />
+            )}
+          </>
+        ) : (
+          route.length > 1 && <Polyline coordinates={route} strokeColor="#00B14F" strokeWidth={5} />
+        )}
       </MapView>
 
       {!isSearchActive && !isDrivingMode && (
         <TouchableOpacity
           onPress={() => router.push('/(tabs)/profile')}
-          className="absolute top-14 right-5 bg-white rounded-full p-1 shadow-md z-50 border border-gray-100"
-          style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 3.84, elevation: 5 }}
+          className="absolute top-14 right-5 bg-brand-card rounded-full p-1 z-50 border border-brand-border"
+          style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.4, shadowRadius: 3.84, elevation: 5 }}
         >
           {user?.imageUrl ? (
             <Image source={{ uri: user.imageUrl }} className="w-11 h-11 rounded-full" />
           ) : (
-            <View className="w-11 h-11 rounded-full bg-gray-200 justify-center items-center">
-              <Text className="text-gray-500 font-bold text-lg">
+            <View className="w-11 h-11 rounded-full bg-brand-surface justify-center items-center">
+              <Text className="text-brand-muted font-bold text-lg">
                 {user?.firstName?.charAt(0) || user?.primaryEmailAddress?.emailAddress?.charAt(0)?.toUpperCase() || '?'}
               </Text>
             </View>
@@ -227,6 +296,8 @@ export default function HomeScreen() {
           destination={destination}
           advice={advice}
           liveTrafficData={liveTrafficData}
+          trafficInfo={trafficInfo}
+          trafficError={trafficError}
           onOpenSearch={() => setIsSearchActive(true)}
           onClearRoute={clearRoute}
           onSaveFavorite={handleSaveFavorite}
@@ -239,6 +310,40 @@ export default function HomeScreen() {
       {isSearchActive && (
         <SearchScreen onClose={() => setIsSearchActive(false)} onSelect={handleSelectPlace} />
       )}
+
+      <Modal visible={saveModalVisible} transparent animationType="fade" onRequestClose={() => setSaveModalVisible(false)}>
+        <View className="flex-1 justify-center items-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
+          <View className="bg-brand-card w-full rounded-2xl p-6 border border-brand-border">
+            <Text className="text-xl font-bold mb-1 text-white">Зберегти маршрут</Text>
+            <Text className="text-brand-muted text-sm mb-4" numberOfLines={2}>
+              {destination?.name}
+            </Text>
+            <TextInput
+              value={saveModalName}
+              onChangeText={setSaveModalName}
+              placeholder="Назва маршруту..."
+              placeholderTextColor="#999999"
+              className="w-full bg-brand-input border border-brand-border px-4 py-3 rounded-xl mb-6 text-lg text-white"
+              autoFocus
+              selectTextOnFocus
+            />
+            <View className="flex-row justify-end">
+              <TouchableOpacity
+                onPress={() => setSaveModalVisible(false)}
+                className="px-5 py-3 rounded-xl mr-3 bg-brand-surface"
+              >
+                <Text className="text-brand-muted font-bold text-base">Скасувати</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={confirmSaveFavorite}
+                className="bg-brand-green px-5 py-3 rounded-xl"
+              >
+                <Text className="text-white font-bold text-base">Зберегти</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
