@@ -1,5 +1,6 @@
 import React from 'react';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import TrafficLight from './TrafficLight';
 import TrafficWarning from './TrafficWarning';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -16,6 +17,7 @@ function formatMinutes(minutes: number | undefined | null): string {
 }
 
 export default function Dashboard({ destination, advice, liveTrafficData, trafficInfo, trafficError, onOpenSearch, onClearRoute, onSaveFavorite, isFavorite, isDrivingMode, onStartDrive }: any) {
+    const insets = useSafeAreaInsets();
     const hasTrafficIssue = trafficInfo && trafficInfo.worstLevel !== 'NORMAL';
     const adviceTotalDistance: number | undefined = advice?.hasLight === false ? advice?.distanceMeters : advice?.totalDistance;
     const totalDistance: number | undefined = trafficInfo?.totalDistanceMeters ?? adviceTotalDistance;
@@ -23,8 +25,8 @@ export default function Dashboard({ destination, advice, liveTrafficData, traffi
         ?? (totalDistance != null ? Math.ceil((totalDistance / 1000) / 40 * 60) : undefined);
     return (
         <View
-            className="px-5 pt-3 pb-10 bg-brand-surface border-t border-brand-border"
-            style={{ elevation: 15, shadowColor: '#000', shadowOffset: { width: 0, height: -3 }, shadowOpacity: 0.4 }}
+            className="px-5 pt-3 bg-brand-surface border-t border-brand-border"
+            style={{ paddingBottom: insets.bottom + 16, elevation: 15, shadowColor: '#000', shadowOffset: { width: 0, height: -3 }, shadowOpacity: 0.4 }}
         >
             <View className="items-center mb-4">
                 <View className="w-10 h-1 rounded-full bg-brand-border" />

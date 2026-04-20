@@ -1,4 +1,5 @@
 import { View, Text, TouchableOpacity, TextInput } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSignIn, useOAuth } from '@clerk/clerk-expo';
 import { useState, useCallback } from 'react';
 import * as WebBrowser from 'expo-web-browser';
@@ -59,54 +60,56 @@ export default function SignInScreen() {
   }, [startOAuthFlow]);
 
   return (
-    <View className="flex-1 justify-center px-6 bg-brand-black">
-      <View className="items-center mb-10">
-        <View className="w-16 h-16 rounded-2xl bg-brand-card border border-brand-border items-center justify-center mb-4">
-          <MaterialCommunityIcons name="traffic-light" size={36} color="#00B14F" />
+    <SafeAreaView className="flex-1 bg-brand-black">
+      <View className="flex-1 justify-center px-6">
+        <View className="items-center mb-10">
+          <View className="w-16 h-16 rounded-2xl bg-brand-card border border-brand-border items-center justify-center mb-4">
+            <MaterialCommunityIcons name="traffic-light" size={36} color="#00B14F" />
+          </View>
+          <Text className="text-3xl font-black text-white tracking-tight">Smart City</Text>
+          <Text className="text-brand-muted text-base mt-1">Навігатор</Text>
         </View>
-        <Text className="text-3xl font-black text-white tracking-tight">Smart City</Text>
-        <Text className="text-brand-muted text-base mt-1">Navigator</Text>
+
+        <TouchableOpacity
+          onPress={onPressGoogle}
+          className="flex-row items-center justify-center bg-brand-card py-4 rounded-xl mb-6 border border-brand-border"
+        >
+          <MaterialCommunityIcons name="google" size={24} color="#DB4437" />
+          <Text className="ml-3 font-semibold text-lg text-white">
+            Увійти через Google
+          </Text>
+        </TouchableOpacity>
+
+        <View className="flex-row items-center mb-6">
+          <View className="flex-1 h-[1px] bg-brand-border" />
+          <Text className="mx-4 text-brand-muted font-medium">або</Text>
+          <View className="flex-1 h-[1px] bg-brand-border" />
+        </View>
+
+        <TextInput
+          placeholder="Пошта"
+          placeholderTextColor="#999999"
+          className="w-full bg-brand-input p-4 rounded-xl mb-4 border border-brand-border text-white"
+          value={emailAddress}
+          onChangeText={setEmailAddress}
+          autoCapitalize="none"
+        />
+        <TextInput
+          placeholder="Пароль"
+          placeholderTextColor="#999999"
+          className="w-full bg-brand-input p-4 rounded-xl mb-6 border border-brand-border text-white"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+        />
+
+        <TouchableOpacity
+          onPress={onSignInPress}
+          className="bg-brand-accent py-4 rounded-xl items-center"
+        >
+          <Text className="text-brand-black font-bold text-lg">Увійти</Text>
+        </TouchableOpacity>
       </View>
-
-      <TouchableOpacity
-        onPress={onPressGoogle}
-        className="flex-row items-center justify-center bg-brand-card py-4 rounded-xl mb-6 border border-brand-border"
-      >
-        <MaterialCommunityIcons name="google" size={24} color="#DB4437" />
-        <Text className="ml-3 font-semibold text-lg text-white">
-          Continue with Google
-        </Text>
-      </TouchableOpacity>
-
-      <View className="flex-row items-center mb-6">
-        <View className="flex-1 h-[1px] bg-brand-border" />
-        <Text className="mx-4 text-brand-muted font-medium">OR</Text>
-        <View className="flex-1 h-[1px] bg-brand-border" />
-      </View>
-
-      <TextInput
-        placeholder="Email"
-        placeholderTextColor="#999999"
-        className="w-full bg-brand-input p-4 rounded-xl mb-4 border border-brand-border text-white"
-        value={emailAddress}
-        onChangeText={setEmailAddress}
-        autoCapitalize="none"
-      />
-      <TextInput
-        placeholder="Password"
-        placeholderTextColor="#999999"
-        className="w-full bg-brand-input p-4 rounded-xl mb-6 border border-brand-border text-white"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
-
-      <TouchableOpacity
-        onPress={onSignInPress}
-        className="bg-brand-accent py-4 rounded-xl items-center"
-      >
-        <Text className="text-brand-black font-bold text-lg">Sign In</Text>
-      </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 }

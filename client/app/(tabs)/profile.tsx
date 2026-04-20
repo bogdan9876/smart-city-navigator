@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUser, useAuth } from '@clerk/clerk-expo';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -8,6 +9,7 @@ export default function ProfileScreen() {
   const { user } = useUser();
   const { signOut } = useAuth();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const handleSignOut = async () => {
     await signOut();
@@ -17,11 +19,14 @@ export default function ProfileScreen() {
   return (
     <View className="flex-1 bg-brand-black">
       {/* Header */}
-      <View className="flex-row items-center pt-14 pb-4 px-4 bg-brand-surface border-b border-brand-border z-10 w-full mb-6">
+      <View
+        className="flex-row items-center pb-4 px-4 bg-brand-surface border-b border-brand-border z-10 w-full mb-6"
+        style={{ paddingTop: insets.top }}
+      >
         <TouchableOpacity onPress={() => router.back()} className="p-2">
           <MaterialCommunityIcons name="arrow-left" size={28} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text className="text-xl font-bold text-white ml-4">Profile</Text>
+        <Text className="text-xl font-bold text-white ml-4">Профіль</Text>
       </View>
 
       <View className="items-center px-6">
@@ -36,10 +41,10 @@ export default function ProfileScreen() {
 
         {/* User Info */}
         <Text className="text-2xl font-bold text-white mb-1">
-          {user?.fullName || "User"}
+          {user?.fullName || "Користувач"}
         </Text>
         <Text className="text-base text-brand-muted mb-8">
-          {user?.primaryEmailAddress?.emailAddress || "No email provided"}
+          {user?.primaryEmailAddress?.emailAddress || "Пошту не вказано"}
         </Text>
 
         {/* Actions */}
@@ -51,7 +56,7 @@ export default function ProfileScreen() {
             <View className="w-10 h-10 rounded-full bg-brand-surface items-center justify-center mr-4">
               <MaterialCommunityIcons name="star-outline" size={24} color="#00B14F" />
             </View>
-            <Text className="flex-1 text-lg font-medium text-white">My Saved Routes</Text>
+            <Text className="flex-1 text-lg font-medium text-white">Мої збережені маршрути</Text>
             <MaterialCommunityIcons name="chevron-right" size={24} color="#999999" />
           </TouchableOpacity>
 
@@ -62,7 +67,7 @@ export default function ProfileScreen() {
             <View className="w-10 h-10 rounded-full bg-brand-surface items-center justify-center mr-4">
               <MaterialCommunityIcons name="logout" size={22} color="#ef4444" />
             </View>
-            <Text className="flex-1 text-lg font-medium text-white">Sign Out</Text>
+            <Text className="flex-1 text-lg font-medium text-white">Вийти</Text>
             <MaterialCommunityIcons name="chevron-right" size={24} color="#999999" />
           </TouchableOpacity>
         </View>

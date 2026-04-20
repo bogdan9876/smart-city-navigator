@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, TextInput, ScrollView, ActivityIndicator } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import axios from 'axios';
 
 export default function SearchScreen({ onClose, onSelect }: { onClose: () => void, onSelect: (place: any) => void }) {
+    const insets = useSafeAreaInsets();
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedQuery, setDebouncedQuery] = useState('');
     const [places, setPlaces] = useState<any[]>([]);
@@ -50,7 +52,7 @@ export default function SearchScreen({ onClose, onSelect }: { onClose: () => voi
     const showEmpty = !isLoading && !isSearching && debouncedQuery.length >= 3 && places.length === 0;
 
     return (
-        <View className="absolute inset-0 bg-brand-black z-50 pt-[60px] px-5">
+        <View className="absolute inset-0 bg-brand-black z-50 px-5" style={{ paddingTop: insets.top + 8 }}>
             <View className="flex-row items-center mb-4">
                 <TouchableOpacity onPress={onClose} className="p-2 mr-2">
                     <MaterialCommunityIcons name="arrow-left" size={26} color="#FFFFFF" />

@@ -1,4 +1,5 @@
 import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, Alert, Modal, TextInput } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState, useCallback } from 'react';
 import { useApi } from '@/hooks/useApi';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -80,6 +81,8 @@ export default function FavoritesScreen() {
     );
   };
 
+  const insets = useSafeAreaInsets();
+
   if (loading) return (
     <View className="flex-1 bg-brand-black justify-center items-center">
       <ActivityIndicator size="large" color="#00B14F" />
@@ -87,7 +90,7 @@ export default function FavoritesScreen() {
   );
 
   return (
-    <View className="flex-1 bg-brand-black p-4 pt-12">
+    <View className="flex-1 bg-brand-black p-4" style={{ paddingTop: insets.top + 16 }}>
       <View className="flex-row items-center mb-6">
         <TouchableOpacity onPress={() => router.back()} className="mr-4">
           <MaterialIcons name="arrow-back" size={28} color="#FFFFFF" />
