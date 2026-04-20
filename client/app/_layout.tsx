@@ -5,9 +5,8 @@ import 'react-native-reanimated';
 import "../global.css";
 import * as SecureStore from 'expo-secure-store';
 import { ClerkProvider, useAuth } from '@clerk/clerk-expo';
-import { useEffect, useState } from 'react';
+import { createContext, useCallback, useEffect, useRef, useState } from 'react';
 import AppSplash from '@/components/AppSplash';
-
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export const unstable_settings = {
@@ -18,44 +17,69 @@ const CLERK_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
 
 const tokenCache = {
   async getToken(key: string) {
-    try { return await SecureStore.getItemAsync(key); } catch (err) { return null; }
+    try { return await SecureStore.getItemAsync(key); } catch { return null; }
   },
   async saveToken(key: string, value: string) {
-    try { return await SecureStore.setItemAsync(key, value); } catch (err) { return; }
+    try { return await SecureStore.setItemAsync(key, value); } catch { return; }
   },
 };
+
+export const LocationReadyContext = createContext<() => void>(() => {});
 
 const InitialLayout = () => {
   const { isLoaded, isSignedIn } = useAuth();
   const segments = useSegments();
   const router = useRouter();
-  const [splashDone, setSplashDone] = useState(false);
   const colorScheme = useColorScheme();
+  const [shouldDismiss, setShouldDismiss] = useState(false);
+  const [splashVisible, setSplashVisible] = useState(true);
+  const minTimePassed = useRef(false);
+  const locationReady = useRef(false);
+
+  const tryDismiss = useCallback(() => {
+    if (minTimePassed.current && locationReady.current) setShouldDismiss(true);
+  }, []);
 
   useEffect(() => {
-    if (!isLoaded || !splashDone) return;
+    const t = setTimeout(() => {
+      minTimePassed.current = true;
+      tryDismiss();
+    }, 2000);
+    return () => clearTimeout(t);
+  }, []);
+
+  const dismissSplash = useCallback(() => {
+    locationReady.current = true;
+    tryDismiss();
+  }, [tryDismiss]);
+
+  useEffect(() => {
+    if (!isLoaded) return;
 
     const inAuthGroup = (segments[0] as string) === '(auth)';
 
     if (!isSignedIn && !inAuthGroup) {
       router.replace('/(auth)/sign-in' as any);
+      locationReady.current = true;
+      tryDismiss();
     } else if (isSignedIn && inAuthGroup) {
       router.replace('/(tabs)' as any);
     }
-  }, [isSignedIn, isLoaded, splashDone, segments, router]);
-
-  if (!splashDone) {
-    return <AppSplash onDone={() => setSplashDone(true)} />;
-  }
+  }, [isSignedIn, isLoaded, segments, router]);
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <LocationReadyContext.Provider value={dismissSplash}>
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <Stack>
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        </Stack>
+        <StatusBar style="auto" />
+      </ThemeProvider>
+      {splashVisible && (
+        <AppSplash shouldDismiss={shouldDismiss} onDone={() => setSplashVisible(false)} />
+      )}
+    </LocationReadyContext.Provider>
   );
 };
 

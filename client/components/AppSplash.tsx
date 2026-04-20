@@ -4,26 +4,30 @@ import Animated, {
   Easing,
   runOnJS,
   useSharedValue,
-  withDelay,
   withTiming,
 } from 'react-native-reanimated';
 import Logo from '@/assets/images/levtrans.svg';
 
-export default function AppSplash({ onDone }: { onDone: () => void }) {
+interface Props {
+  shouldDismiss: boolean;
+  onDone: () => void;
+}
+
+export default function AppSplash({ shouldDismiss, onDone }: Props) {
   const opacity = useSharedValue(0);
   const scale = useSharedValue(0.82);
 
   useEffect(() => {
-    opacity.value = withTiming(1, { duration: 700, easing: Easing.out(Easing.cubic) });
     scale.value = withTiming(1, { duration: 700, easing: Easing.out(Easing.cubic) });
-
-    opacity.value = withDelay(
-      1400,
-      withTiming(0, { duration: 400 }, (finished) => {
-        if (finished) runOnJS(onDone)();
-      })
-    );
+    opacity.value = withTiming(1, { duration: 700, easing: Easing.out(Easing.cubic) });
   }, []);
+
+  useEffect(() => {
+    if (!shouldDismiss) return;
+    opacity.value = withTiming(0, { duration: 500 }, (finished) => {
+      if (finished) runOnJS(onDone)();
+    });
+  }, [shouldDismiss]);
 
   return (
     <View style={styles.container}>
@@ -36,7 +40,7 @@ export default function AppSplash({ onDone }: { onDone: () => void }) {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: '#121212',
     justifyContent: 'center',
     alignItems: 'center',

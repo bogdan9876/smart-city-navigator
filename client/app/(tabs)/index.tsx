@@ -5,8 +5,9 @@ import { useLocation } from '@/hooks/useLocation';
 import { useTrafficLight } from '@/hooks/useTrafficLight';
 import { useRouteTraffic, TrafficLevel } from '@/hooks/useRouteTraffic';
 import { getBearing } from '@/utils/locationUtils';
-import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { ActivityIndicator, Keyboard, Text, View, Image, TouchableOpacity, Alert, Modal, TextInput } from 'react-native';
+import React, { useContext, useEffect, useRef, useState, useCallback } from 'react';
+import { Keyboard, Text, View, Image, TouchableOpacity, Alert, Modal, TextInput } from 'react-native';
+import { LocationReadyContext } from '@/app/_layout';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import { useUser } from '@clerk/clerk-expo';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
@@ -22,7 +23,8 @@ const COORD_EPSILON = 1e-5;
 
 export default function HomeScreen() {
   const mapRef = useRef<MapView>(null);
-  const { userLoc, errorMsg } = useLocation();
+  const { userLoc } = useLocation();
+  const notifyLocationReady = useContext(LocationReadyContext);
   const { user } = useUser();
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -213,15 +215,11 @@ export default function HomeScreen() {
     getRoadData();
   }, [destination]);
 
-  if (!userLoc) {
-    return (
-      <View className="flex-1 justify-center items-center bg-brand-black">
-        <ActivityIndicator size="large" color="#00B14F" />
-        <Text className="mt-5 text-lg font-bold text-white">Шукаємо супутники GPS...</Text>
-        {errorMsg && <Text className="mt-2.5 text-red-500">{errorMsg}</Text>}
-      </View>
-    );
-  }
+  useEffect(() => {
+    if (userLoc) notifyLocationReady();
+  }, [userLoc]);
+
+  if (!userLoc) return null;
 
   return (
     <View className="flex-1">
