@@ -23,7 +23,7 @@ const COORD_EPSILON = 1e-5;
 
 export default function HomeScreen() {
   const mapRef = useRef<MapView>(null);
-  const { userLoc } = useLocation();
+  const { userLoc, gpsSpeed } = useLocation();
   const notifyLocationReady = useContext(LocationReadyContext);
   const { user } = useUser();
   const router = useRouter();
@@ -38,8 +38,8 @@ export default function HomeScreen() {
   const [saveModalVisible, setSaveModalVisible] = useState(false);
   const [saveModalName, setSaveModalName] = useState('');
 
-  const liveTrafficData = useTrafficLight(advice);
   const { data: trafficInfo, error: trafficError } = useRouteTraffic(userLoc, destination);
+  const liveTrafficData = useTrafficLight(advice, trafficInfo, userLoc, gpsSpeed);
 
   const currentFavorite = destination ? favorites.find(f =>
     Math.abs(f.latitude - destination.lat) < COORD_EPSILON &&

@@ -158,6 +158,7 @@ export default function FavoritesScreen() {
               placeholderTextColor="#999999"
               className="w-full bg-brand-input border border-brand-border px-4 py-3 rounded-xl mb-6 text-lg text-white"
               autoFocus
+              selectTextOnFocus
             />
             <View className="flex-row justify-end">
               <TouchableOpacity

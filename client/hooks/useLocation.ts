@@ -3,6 +3,7 @@ import * as Location from 'expo-location';
 
 export function useLocation() {
     const [userLoc, setUserLoc] = useState<{ latitude: number, longitude: number } | null>(null);
+    const [gpsSpeed, setGpsSpeed] = useState<number | null>(null); // m/s, null if unavailable
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
     useEffect(() => {
@@ -34,6 +35,7 @@ export function useLocation() {
                             latitude: loc.coords.latitude,
                             longitude: loc.coords.longitude,
                         });
+                        setGpsSpeed(loc.coords.speed != null && loc.coords.speed >= 0 ? loc.coords.speed : null);
                     }
                 );
             } catch (e) {
@@ -50,5 +52,5 @@ export function useLocation() {
         };
     }, []);
 
-    return { userLoc, errorMsg };
+    return { userLoc, gpsSpeed, errorMsg };
 }

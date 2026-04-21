@@ -84,6 +84,13 @@ export default function SearchScreen({ onClose, onSelect }: { onClose: () => voi
             </View>
 
             <ScrollView keyboardShouldPersistTaps="handled">
+                {searchQuery.length === 0 && (
+                    <View className="items-center mt-16 px-4">
+                        <MaterialCommunityIcons name="magnify" size={48} color="#2C2C2C" />
+                        <Text className="text-white font-semibold text-lg mt-4">Куди їдемо?</Text>
+                        <Text className="text-brand-muted text-sm mt-1 text-center">Введіть адресу, назву місця або орієнтир у Львові</Text>
+                    </View>
+                )}
                 {places.map((place, index) => (
                     <TouchableOpacity
                         key={index}

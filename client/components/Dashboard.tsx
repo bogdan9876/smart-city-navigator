@@ -138,39 +138,85 @@ export default function Dashboard({ destination, advice, liveTrafficData, traffi
                     )}
                     {advice?.hasLight ? (
                         liveTrafficData ? (
-                            <View className="flex-row items-center justify-around mt-1.5">
-                                <View className="p-2.5">
-                                    <TrafficLight phase={liveTrafficData.phase} />
-                                </View>
-                                <View className="flex-1 pl-5 justify-center">
-                                    <View className="flex-row justify-between items-baseline mb-1.5">
-                                        <Text className="text-base text-brand-muted font-medium">До світлофора:</Text>
-                                        <Text className="text-lg text-white font-bold">{formatDistance(advice.distanceMeters ?? advice.distanceToLight)}</Text>
+                            <View className="mt-1.5">
+                                {liveTrafficData.isInJam ? (
+                                    /* ── JAM STATE ── */
+                                    <View>
+                                        <View className="flex-row items-center bg-red-950 rounded-xl px-4 py-3 border border-red-900 mb-3">
+                                            <MaterialCommunityIcons name="car-brake-alert" size={22} color="#FF3B30" />
+                                            <View className="ml-3 flex-1">
+                                                <Text className="text-red-400 font-bold text-base">Ви у заторі</Text>
+                                                <Text className="text-red-300 text-xs mt-0.5">Розрахунок оптимальної швидкості тимчасово недоступний</Text>
+                                            </View>
+                                        </View>
+
+                                        <View className="flex-row gap-3 mb-3">
+                                            <View className="flex-1 bg-brand-card rounded-xl p-3 border border-brand-border items-center">
+                                                <MaterialCommunityIcons name="clock-fast" size={20} color="#FFB800" />
+                                                <Text className="text-white font-bold text-xl mt-1">
+                                                    ~{liveTrafficData.estimatedJamExitMinutes} хв
+                                                </Text>
+                                                <Text className="text-brand-muted text-xs text-center">орієнт. час у заторі</Text>
+                                            </View>
+                                            <View className="flex-1 bg-brand-card rounded-xl p-3 border border-brand-border items-center">
+                                                <MaterialCommunityIcons name="map-marker-distance" size={20} color="#999999" />
+                                                <Text className="text-white font-bold text-xl mt-1">
+                                                    {formatDistance(liveTrafficData.jamBeforeLightMeters)}
+                                                </Text>
+                                                <Text className="text-brand-muted text-xs text-center">затор до світлофора</Text>
+                                            </View>
+                                        </View>
+
+                                        {liveTrafficData.speedAfterJam != null && (
+                                            <View className="bg-brand-card border border-brand-border rounded-xl py-3 px-4 items-center">
+                                                <Text className="text-xs text-brand-muted font-bold tracking-wider mb-0.5">ШВИДКІСТЬ ПІСЛЯ ЗАТОРУ</Text>
+                                                <View className="flex-row items-baseline">
+                                                    <Text className="text-4xl font-black text-white">{liveTrafficData.speedAfterJam}</Text>
+                                                    <Text className="text-base font-bold text-brand-muted ml-1">км/год</Text>
+                                                </View>
+                                                <Text className="text-brand-muted text-xs mt-1">щоб потрапити на зелене</Text>
+                                            </View>
+                                        )}
                                     </View>
-                                    <View className="flex-row justify-between items-baseline mb-2">
-                                        <Text className="text-base text-brand-muted font-medium">Фаза:</Text>
-                                        <Text className={`text-2xl font-bold ${liveTrafficData.phase === 'GREEN' ? 'text-brand-green' : 'text-red-500'}`}>
-                                            {liveTrafficData.timeLeft} сек
-                                        </Text>
-                                    </View>
-                                    {/* Phase progress bar */}
-                                    <View className="h-1.5 bg-brand-border rounded-full mb-3 overflow-hidden">
-                                        <View
-                                            className={`h-full rounded-full ${liveTrafficData.phase === 'GREEN' ? 'bg-brand-green' : 'bg-red-500'}`}
-                                            style={{ width: `${Math.min((liveTrafficData.timeLeft / 60) * 100, 100)}%` }}
-                                        />
-                                    </View>
-                                    <View
-                                        className="bg-brand-card border border-brand-border rounded-xl py-2.5 px-4 items-center"
-                                        style={{ elevation: 2 }}
-                                    >
-                                        <Text className="text-xs text-brand-muted font-bold tracking-wider mb-0.5">РЕКОМЕНДОВАНА ШВИДКІСТЬ</Text>
-                                        <View className="flex-row items-baseline">
-                                            <Text className="text-4xl font-black text-white">{liveTrafficData.speed}</Text>
-                                            <Text className="text-base font-bold text-brand-muted ml-1">км/год</Text>
+                                ) : (
+                                    /* ── NORMAL STATE ── */
+                                    <View className="flex-row items-center justify-around">
+                                        <View className="p-2.5">
+                                            <TrafficLight phase={liveTrafficData.phase} />
+                                        </View>
+                                        <View className="flex-1 pl-5 justify-center">
+                                            <View className="flex-row justify-between items-baseline mb-1.5">
+                                                <Text className="text-base text-brand-muted font-medium">До світлофора:</Text>
+                                                <Text className="text-lg text-white font-bold">{formatDistance(advice.distanceMeters ?? advice.distanceToLight)}</Text>
+                                            </View>
+                                            <View className="flex-row justify-between items-baseline mb-2">
+                                                <Text className="text-base text-brand-muted font-medium">Фаза:</Text>
+                                                <Text className={`text-2xl font-bold ${liveTrafficData.phase === 'GREEN' ? 'text-brand-green' : 'text-red-500'}`}>
+                                                    {liveTrafficData.timeLeft} сек
+                                                </Text>
+                                            </View>
+                                            <View className="h-1.5 bg-brand-border rounded-full mb-3 overflow-hidden">
+                                                <View
+                                                    className={`h-full rounded-full ${liveTrafficData.phase === 'GREEN' ? 'bg-brand-green' : 'bg-red-500'}`}
+                                                    style={{ width: `${Math.min((liveTrafficData.timeLeft / 60) * 100, 100)}%` }}
+                                                />
+                                            </View>
+                                            {liveTrafficData.speed != null ? (
+                                                <View className="bg-brand-card border border-brand-border rounded-xl py-2.5 px-4 items-center" style={{ elevation: 2 }}>
+                                                    <Text className="text-xs text-brand-muted font-bold tracking-wider mb-0.5">РЕКОМЕНДОВАНА ШВИДКІСТЬ</Text>
+                                                    <View className="flex-row items-baseline">
+                                                        <Text className="text-4xl font-black text-white">{liveTrafficData.speed}</Text>
+                                                        <Text className="text-base font-bold text-brand-muted ml-1">км/год</Text>
+                                                    </View>
+                                                </View>
+                                            ) : (
+                                                <View className="bg-brand-card border border-brand-border rounded-xl py-2.5 px-4 items-center">
+                                                    <Text className="text-xs text-brand-muted font-bold tracking-wider">РУХАЙТЕСЬ ВІЛЬНО</Text>
+                                                </View>
+                                            )}
                                         </View>
                                     </View>
-                                </View>
+                                )}
                             </View>
                         ) : (
                             <View className="flex-row items-center justify-center py-3">
