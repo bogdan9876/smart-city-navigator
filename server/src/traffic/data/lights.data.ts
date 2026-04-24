@@ -51,3 +51,4 @@ export const trafficLights: TrafficLight[] = [
   { id: 27, name: 'Бандери – Коновальця', lat: 49.8355, lng: 24.0174, green: 30, red: 20, start: BASE_START + 130000 },
   { id: 28, name: 'Бандери – Чупринки', lat: 49.8353, lng: 24.0103, green: 30, red: 25, start: BASE_START + 135000 },
 ];
+
