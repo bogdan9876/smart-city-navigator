@@ -6,6 +6,8 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  app.enableCors();
+
   const config = new DocumentBuilder()
     .setTitle('Smart City Navigator API')
     .setDescription('The API description for Smart City project')
@@ -16,7 +18,10 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
-  await app.listen(3000);
+  const port = process.env.PORT || 3000;
+
+  await app.listen(port, '0.0.0.0');
+  console.log(`Server is running on port ${port}`);
 }
 
 bootstrap().catch((err) => console.error(err));
