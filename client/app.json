@@ -46,6 +46,19 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "f3dd2b48-dae3-48e2-ac87-0a8256af719c"
+      }
+    },
+    "owner": "etenity8",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/f3dd2b48-dae3-48e2-ac87-0a8256af719c"
     }
   }
 }
