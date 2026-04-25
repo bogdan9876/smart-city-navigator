@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 model FavoriteRoute {
@@ -15,4 +15,7 @@ model FavoriteRoute {
   originalAddress String
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+  @@map("favorite_routes")
 }
