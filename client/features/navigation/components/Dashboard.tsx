@@ -1,8 +1,8 @@
 import React from 'react';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import TrafficLight from './TrafficLight';
-import TrafficWarning from './TrafficWarning';
+import TrafficLight from '@/features/traffic/components/TrafficLight';
+import TrafficWarning from '@/features/traffic/components/TrafficWarning';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 function formatDistance(meters: number | undefined | null): string {

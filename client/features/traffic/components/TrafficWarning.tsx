@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import type { TrafficLevel } from '@/hooks/useRouteTraffic';
+import type { TrafficLevel } from '@/features/traffic/hooks/useRouteTraffic';
 
 type Props = {
     level: TrafficLevel;

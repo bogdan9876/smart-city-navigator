@@ -6,8 +6,8 @@ import "../global.css";
 import * as SecureStore from 'expo-secure-store';
 import { ClerkProvider, useAuth } from '@clerk/clerk-expo';
 import { createContext, useCallback, useEffect, useRef, useState } from 'react';
-import AppSplash from '@/components/AppSplash';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import AppSplash from '@/shared/ui/AppSplash';
+import { useColorScheme } from '@/shared/hooks/use-color-scheme';
 
 export const unstable_settings = {
   anchor: '(tabs)',

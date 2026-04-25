@@ -11,9 +11,12 @@ export const useApi = () => {
     const instance = axios.create({ baseURL: API_URL });
 
     instance.interceptors.request.use(async (config) => {
-      const token = await getToken();
-      if (token && config.headers) {
-        config.headers.Authorization = `Bearer ${token}`;
+      try {
+        const token = await getToken();
+        if (token && config.headers) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
+      } catch (err: any) {
       }
       return config;
     });

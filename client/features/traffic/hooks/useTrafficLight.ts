@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { haversineMeters } from '@/utils/locationUtils';
+import { haversineMeters } from '@/features/location/utils/locationUtils';
 import type { RouteTraffic } from './useRouteTraffic';
 
 const NORMAL_SPEED_MPS = 11; // ~40 km/h free-flow city speed

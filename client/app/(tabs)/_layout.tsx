@@ -1,5 +1,5 @@
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Colors } from '@/shared/constants/theme';
+import { useColorScheme } from '@/shared/hooks/use-color-scheme';
 import { Tabs } from 'expo-router';
 import React from 'react';
 
