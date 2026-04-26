@@ -231,13 +231,15 @@ export default function HomeScreen() {
       >
         <Marker coordinate={userLoc} title="Моє авто" pinColor="blue" />
         {destination && <Marker coordinate={{ latitude: destination.lat, longitude: destination.lng }} title={destination.name} pinColor="purple" />}
-        {advice?.hasLight && advice?.targetLight && (
+        {liveTrafficData?.lightsAhead?.map((l: any) => (
           <Marker
-            coordinate={{ latitude: advice.targetLight.lat, longitude: advice.targetLight.lng }}
-            title="Світлофор на шляху"
-            pinColor={liveTrafficData?.phase === 'GREEN' ? 'green' : 'red'}
+            key={`light-${l.light.id}`}
+            coordinate={{ latitude: l.light.lat, longitude: l.light.lng }}
+            title={l.light.name}
+            description={`${l.phaseAtArrival === 'GREEN' ? 'Зелене' : 'Червоне'} при прибутті · ${l.timeLeftAtArrival}с`}
+            pinColor={l.phaseAtArrival === 'GREEN' ? 'green' : 'red'}
           />
-        )}
+        ))}
         {trafficInfo && trafficInfo.coords.length > 1 && trafficInfo.segments.length > 0 ? (
           <>
             <Polyline

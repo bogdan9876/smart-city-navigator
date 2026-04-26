@@ -1,11 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { RoutingService } from './routing.service';
 import { TrafficLightService } from './traffic-light.service';
 
 @Injectable()
 export class TrafficService {
-  private readonly logger = new Logger(TrafficService.name);
-
   constructor(
     private readonly routingService: RoutingService,
     private readonly trafficLightService: TrafficLightService,
@@ -21,9 +19,9 @@ export class TrafficService {
       userLat, userLng, destLat, destLng,
     );
 
-    const lightInfo = this.trafficLightService.findNearestLightOnRoute(coords);
+    const lightsOnRoute = this.trafficLightService.findAllLightsOnRoute(coords);
 
-    if (!lightInfo) {
+    if (lightsOnRoute.length === 0) {
       return {
         hasLight: false,
         routeCoords: coords,
@@ -31,25 +29,29 @@ export class TrafficService {
       };
     }
 
-    const distanceToLight = this.trafficLightService.calculateDistanceToLight(
-      coords,
-      lightInfo.idx,
-    );
-
-    const phaseInfo = this.trafficLightService.calculateLightPhaseAndSpeed(
-      lightInfo.light,
-      distanceToLight,
-    );
+    const wave = this.trafficLightService.calculateGreenWave(lightsOnRoute);
+    const first = wave.lightsAhead[0];
 
     return {
       hasLight: true,
       routeCoords: coords,
       distanceMeters: Math.round(distanceMeters),
-      distanceToLight: Math.round(distanceToLight),
-      phase: phaseInfo.phase,
-      timeLeft: phaseInfo.timeLeft,
-      recommendedSpeedKmh: phaseInfo.recommendedSpeedKmh,
-      targetLight: lightInfo.light,
+
+      // Legacy single-light fields point to the closest light:
+      distanceToLight: Math.round(first.distanceMeters),
+      phase: first.phaseAtArrival,
+      timeLeft: first.timeLeftAtArrival,
+      recommendedSpeedKmh: wave.recommendedSpeedKmh,
+      targetLight: first.light,
+
+      // Green-wave additions:
+      lightsAhead: wave.lightsAhead.map((l) => ({
+        light: l.light,
+        distanceMeters: Math.round(l.distanceMeters),
+        phaseAtArrival: l.phaseAtArrival,
+        timeLeftAtArrival: l.timeLeftAtArrival,
+      })),
+      greenCount: wave.greenCount,
     };
   }
 }

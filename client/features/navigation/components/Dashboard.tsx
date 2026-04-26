@@ -214,6 +214,27 @@ export default function Dashboard({ destination, advice, liveTrafficData, traffi
                                                     <Text className="text-xs text-brand-muted font-bold tracking-wider">РУХАЙТЕСЬ ВІЛЬНО</Text>
                                                 </View>
                                             )}
+                                            {liveTrafficData.lightsAhead && liveTrafficData.lightsAhead.length >= 2 && (
+                                                <View className="flex-row items-center bg-brand-card border border-brand-border rounded-xl mt-2 px-3 py-2">
+                                                    <MaterialCommunityIcons name="waves" size={14} color="#00B14F" />
+                                                    <Text className="text-xs text-white font-bold ml-1.5">
+                                                        Зелена хвиля {liveTrafficData.greenCount}/{liveTrafficData.lightsAhead.length}
+                                                    </Text>
+                                                    <View className="flex-row ml-2 flex-1 justify-end">
+                                                        {liveTrafficData.lightsAhead.map((l: any, i: number) => (
+                                                            <View
+                                                                key={i}
+                                                                className="rounded-full ml-1"
+                                                                style={{
+                                                                    width: 8,
+                                                                    height: 8,
+                                                                    backgroundColor: l.phaseAtArrival === 'GREEN' ? '#00B14F' : '#FF3B30',
+                                                                }}
+                                                            />
+                                                        ))}
+                                                    </View>
+                                                </View>
+                                            )}
                                         </View>
                                     </View>
                                 )}

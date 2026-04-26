@@ -11,13 +11,22 @@ export interface TrafficLight {
   start: number;
 }
 
-export interface LightPhaseResult {
-  phase: 'GREEN' | 'RED';
-  timeLeft: number;
-  recommendedSpeedKmh: number;
+export interface LightOnRoute {
+  light: TrafficLight;
+  /** Distance from route start to the light, in metres */
+  distanceMeters: number;
 }
 
-export interface LightOnRouteResult {
+export interface LightAhead {
   light: TrafficLight;
-  idx: number;
+  distanceMeters: number;
+  phaseAtArrival: 'GREEN' | 'RED';
+  /** Seconds until phase changes at the predicted arrival moment */
+  timeLeftAtArrival: number;
+}
+
+export interface GreenWaveResult {
+  recommendedSpeedKmh: number;
+  lightsAhead: LightAhead[];
+  greenCount: number;
 }

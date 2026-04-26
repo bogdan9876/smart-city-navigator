@@ -1,108 +1,143 @@
-import { Injectable } from '@nestjs/common';
-import { trafficLights } from './data/lights.data';
-import { getDistance, pointToSegmentDistance } from '../../common/utils/geo.util';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { DatabaseService } from '../../database/database.service';
+import { getDistance, projectPointOnSegment } from '../../common/utils/geo.util';
 import {
-  LightOnRouteResult,
-  LightPhaseResult,
+  GreenWaveResult,
+  LightAhead,
+  LightOnRoute,
   TrafficLight,
 } from './interfaces/traffic-light.interface';
 
+const MIN_SPEED_KMH = 5;
 const MAX_SPEED_KMH = 60;
-const LIGHT_PROXIMITY_METERS = 20;
-const LOOKAHEAD_WINDOWS = 5;
+const SPEED_STEP_KMH = 1;
+const LIGHT_PROXIMITY_METERS = 35;
 
 @Injectable()
-export class TrafficLightService {
-  findNearestLightOnRoute(coords: [number, number][]): LightOnRouteResult | null {
-    let best: { light: TrafficLight; idx: number } | null = null;
+export class TrafficLightService implements OnModuleInit {
+  private readonly logger = new Logger(TrafficLightService.name);
+  private lights: TrafficLight[] = [];
 
-    for (const light of trafficLights) {
+  constructor(private readonly db: DatabaseService) {}
+
+  async onModuleInit(): Promise<void> {
+    await this.reloadLights();
+  }
+
+  async reloadLights(): Promise<void> {
+    const rows = await this.db.trafficLight.findMany({ orderBy: { id: 'asc' } });
+    this.lights = rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      lat: r.lat,
+      lng: r.lng,
+      green: r.green,
+      red: r.red,
+      start: r.start.getTime(),
+    }));
+    this.logger.log(`Loaded ${this.lights.length} traffic lights from DB`);
+  }
+
+  /**
+   * Finds every traffic light whose perpendicular distance to the route is
+   * within LIGHT_PROXIMITY_METERS, computes the cumulative distance from
+   * route start to each light's foot-of-perpendicular, and returns them
+   * sorted by distance.
+   */
+  findAllLightsOnRoute(coords: [number, number][]): LightOnRoute[] {
+    if (coords.length < 2) return [];
+
+    const cumDist: number[] = [0];
+    for (let i = 0; i < coords.length - 1; i++) {
+      const d = getDistance(
+        coords[i][1], coords[i][0],
+        coords[i + 1][1], coords[i + 1][0],
+      );
+      cumDist.push(cumDist[i] + d);
+    }
+
+    const matches: LightOnRoute[] = [];
+
+    for (const light of this.lights) {
+      let bestIdx = -1;
+      let bestT = 0;
+      let bestPerp = Infinity;
+
       for (let i = 0; i < coords.length - 1; i++) {
-        if (best && i >= best.idx) break;
-        const dist = pointToSegmentDistance(
+        const proj = projectPointOnSegment(
           light.lat, light.lng,
           coords[i][1], coords[i][0],
           coords[i + 1][1], coords[i + 1][0],
         );
-        if (dist < LIGHT_PROXIMITY_METERS) {
-          best = { light, idx: i };
-          break;
+        if (proj.distance < LIGHT_PROXIMITY_METERS && proj.distance < bestPerp) {
+          bestPerp = proj.distance;
+          bestIdx = i;
+          bestT = proj.t;
         }
       }
-    }
 
-    return best;
-  }
-
-  calculateDistanceToLight(coords: [number, number][], lightIndex: number): number {
-    let total = 0;
-    for (let i = 0; i < lightIndex; i++) {
-      total += getDistance(
-        coords[i][1], coords[i][0],
-        coords[i + 1][1], coords[i + 1][0],
-      );
-    }
-    return total;
-  }
-
-  calculateLightPhaseAndSpeed(
-    light: TrafficLight,
-    distanceMeters: number,
-  ): LightPhaseResult {
-    const cycleMs = (light.green + light.red) * 1_000;
-    const elapsed = (Date.now() - light.start) % cycleMs;
-    const isGreen = elapsed < light.green * 1_000;
-
-    const windows = this.buildGreenWindows(light, elapsed, isGreen);
-
-    for (const win of windows) {
-      const targetTime = win.start === 0 ? win.end : win.start;
-      const speedKmh = Math.round((distanceMeters / targetTime) * 3.6);
-
-      if (speedKmh <= MAX_SPEED_KMH) {
-        return {
-          phase: isGreen ? 'GREEN' : 'RED',
-          timeLeft: Math.round(targetTime),
-          recommendedSpeedKmh: speedKmh,
-        };
+      if (bestIdx >= 0) {
+        const segLen = cumDist[bestIdx + 1] - cumDist[bestIdx];
+        matches.push({
+          light,
+          distanceMeters: cumDist[bestIdx] + segLen * bestT,
+        });
       }
     }
 
-    // Fallback: slowest possible window
-    const last = windows[windows.length - 1];
-    const fallbackTime = last.start === 0 ? last.end : last.start;
+    return matches.sort((a, b) => a.distanceMeters - b.distanceMeters);
+  }
+
+  /**
+   * Brute-forces speed candidates in [MIN_SPEED_KMH..MAX_SPEED_KMH] and picks
+   * the one that hits GREEN at the maximum number of lights. Ties broken by
+   * higher speed (faster trip overall).
+   */
+  calculateGreenWave(
+    lights: LightOnRoute[],
+    now: number = Date.now(),
+  ): GreenWaveResult {
+    if (lights.length === 0) {
+      return { recommendedSpeedKmh: MAX_SPEED_KMH, lightsAhead: [], greenCount: 0 };
+    }
+
+    let bestSpeed = MIN_SPEED_KMH;
+    let bestCount = -1;
+    let bestDetails: LightAhead[] = [];
+
+    for (let v = MIN_SPEED_KMH; v <= MAX_SPEED_KMH; v += SPEED_STEP_KMH) {
+      const vMs = v / 3.6;
+      let count = 0;
+      const details: LightAhead[] = [];
+
+      for (const { light, distanceMeters } of lights) {
+        const tSec = distanceMeters / vMs;
+        const cycleSec = light.green + light.red;
+        const elapsed = (now - light.start) / 1000 + tSec;
+        const cyclePos = ((elapsed % cycleSec) + cycleSec) % cycleSec;
+        const isGreen = cyclePos < light.green;
+        const timeLeft = isGreen ? light.green - cyclePos : cycleSec - cyclePos;
+
+        if (isGreen) count++;
+        details.push({
+          light,
+          distanceMeters,
+          phaseAtArrival: isGreen ? 'GREEN' : 'RED',
+          timeLeftAtArrival: Math.round(timeLeft),
+        });
+      }
+
+      if (count > bestCount || (count === bestCount && v > bestSpeed)) {
+        bestSpeed = v;
+        bestCount = count;
+        bestDetails = details;
+      }
+    }
+
     return {
-      phase: isGreen ? 'GREEN' : 'RED',
-      timeLeft: Math.round(fallbackTime),
-      recommendedSpeedKmh: Math.min(
-        MAX_SPEED_KMH,
-        Math.round((distanceMeters / fallbackTime) * 3.6),
-      ),
+      recommendedSpeedKmh: bestSpeed,
+      lightsAhead: bestDetails,
+      greenCount: bestCount,
     };
-  }
-
-  private buildGreenWindows(
-    light: TrafficLight,
-    elapsed: number,
-    isGreen: boolean,
-  ): { start: number; end: number }[] {
-    const windows: { start: number; end: number }[] = [];
-
-    if (isGreen) {
-      const remainingGreen = (light.green * 1_000 - elapsed) / 1_000;
-      windows.push({ start: 0, end: remainingGreen });
-      for (let n = 1; n <= LOOKAHEAD_WINDOWS; n++) {
-        const s = remainingGreen + light.red + (n - 1) * (light.green + light.red);
-        windows.push({ start: s, end: s + light.green });
-      }
-    } else {
-      const timeToGreen = ((light.green + light.red) * 1_000 - elapsed) / 1_000;
-      for (let n = 0; n <= LOOKAHEAD_WINDOWS; n++) {
-        const s = timeToGreen + n * (light.green + light.red);
-        windows.push({ start: s, end: s + light.green });
-      }
-    }
-
-    return windows;
   }
 }

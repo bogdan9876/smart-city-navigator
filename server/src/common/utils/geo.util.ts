@@ -22,18 +22,21 @@ export function getDistance(
 }
 
 /**
- * Distance in metres from point P to the closest point on segment A→B.
- * Uses local equirectangular projection (lng scaled by cos(lat)) — accurate
- * within tens of metres at city scale.
+ * Projects point P onto segment A→B using local equirectangular projection
+ * (lng scaled by cos(lat)). Accurate within tens of metres at city scale.
+ *
+ * Returns:
+ *   distance — perpendicular distance in metres to the closest point on segment
+ *   t        — clamped position [0..1] along the segment (0 = A, 1 = B)
  */
-export function pointToSegmentDistance(
+export function projectPointOnSegment(
   pLat: number,
   pLng: number,
   aLat: number,
   aLng: number,
   bLat: number,
   bLng: number,
-): number {
+): { distance: number; t: number } {
   const M_PER_DEG_LAT = 111_320;
   const cosLat = Math.cos((aLat * Math.PI) / 180);
   const mPerDegLng = M_PER_DEG_LAT * cosLat;
@@ -45,7 +48,7 @@ export function pointToSegmentDistance(
 
   const segLenSq = bx * bx + by * by;
   if (segLenSq === 0) {
-    return Math.sqrt(px * px + py * py);
+    return { distance: Math.sqrt(px * px + py * py), t: 0 };
   }
 
   let t = (px * bx + py * by) / segLenSq;
@@ -54,5 +57,16 @@ export function pointToSegmentDistance(
 
   const dx = px - t * bx;
   const dy = py - t * by;
-  return Math.sqrt(dx * dx + dy * dy);
+  return { distance: Math.sqrt(dx * dx + dy * dy), t };
+}
+
+export function pointToSegmentDistance(
+  pLat: number,
+  pLng: number,
+  aLat: number,
+  aLng: number,
+  bLat: number,
+  bLng: number,
+): number {
+  return projectPointOnSegment(pLat, pLng, aLat, aLng, bLat, bLng).distance;
 }

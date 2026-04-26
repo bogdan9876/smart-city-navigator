@@ -19,3 +19,17 @@ model FavoriteRoute {
   @@index([userId])
   @@map("favorite_routes")
 }
+
+model TrafficLight {
+  id        Int      @id @default(autoincrement())
+  name      String
+  lat       Float
+  lng       Float
+  green     Int
+  red       Int
+  start     DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("traffic_lights")
+}
