@@ -1,4 +1,4 @@
-import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, Alert, Modal, TextInput } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, Alert, Modal, TextInput } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState, useCallback } from 'react';
 import { useApi } from '@/shared/hooks/useApi';
@@ -6,6 +6,18 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 
 type FavoriteRoute = { id: string; customName: string; originalAddress: string; latitude: number; longitude: number; };
+
+function SkeletonRow() {
+  return (
+    <View className="flex-row items-center bg-brand-card p-4 rounded-2xl mb-3 border border-brand-border">
+      <View className="bg-brand-surface rounded-full mr-4" style={{ width: 48, height: 48 }} />
+      <View className="flex-1">
+        <View className="bg-brand-surface rounded-md" style={{ height: 14, width: '60%' }} />
+        <View className="bg-brand-surface rounded-md mt-2" style={{ height: 10, width: '85%' }} />
+      </View>
+    </View>
+  );
+}
 
 export default function FavoritesScreen() {
   const api = useApi();
@@ -83,12 +95,6 @@ export default function FavoritesScreen() {
 
   const insets = useSafeAreaInsets();
 
-  if (loading) return (
-    <View className="flex-1 bg-brand-black justify-center items-center">
-      <ActivityIndicator size="large" color="#00B14F" />
-    </View>
-  );
-
   return (
     <View className="flex-1 bg-brand-black p-4" style={{ paddingTop: insets.top + 16 }}>
       <View className="flex-row items-center mb-6">
@@ -97,12 +103,19 @@ export default function FavoritesScreen() {
         </TouchableOpacity>
         <View className="flex-1">
           <Text className="text-2xl font-bold text-white">Мої маршрути</Text>
-          {favorites.length > 0 && (
+          {!loading && favorites.length > 0 && (
             <Text className="text-brand-muted text-sm">{favorites.length} збережено</Text>
           )}
         </View>
       </View>
 
+      {loading ? (
+        <View>
+          <SkeletonRow />
+          <SkeletonRow />
+          <SkeletonRow />
+        </View>
+      ) : (
       <FlatList
         data={favorites}
         keyExtractor={(item) => item.id}
@@ -141,6 +154,7 @@ export default function FavoritesScreen() {
           </View>
         }
       />
+      )}
 
       {/* Edit Modal */}
       <Modal
@@ -156,7 +170,8 @@ export default function FavoritesScreen() {
               onChangeText={setNewName}
               placeholder="Нова назва..."
               placeholderTextColor="#999999"
-              style={{ flex: 1, fontSize: 16, color: '#FFFFFF', paddingHorizontal: 16 }}
+              className="bg-brand-surface border border-brand-border rounded-xl mb-4"
+              style={{ fontSize: 16, color: '#FFFFFF', paddingHorizontal: 16, paddingVertical: 12 }}
               autoFocus
               selectTextOnFocus
             />

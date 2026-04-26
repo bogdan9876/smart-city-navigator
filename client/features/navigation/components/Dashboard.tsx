@@ -34,14 +34,14 @@ export default function Dashboard({ destination, advice, liveTrafficData, traffi
 
             <View className="flex-row items-center bg-brand-input px-4 py-4 rounded-xl border border-brand-border mb-1.5">
                 <TouchableOpacity style={{ flex: 1 }} activeOpacity={0.8} onPress={onOpenSearch}>
-                    <Text className={`text-lg ${destination ? 'text-white font-bold' : 'text-brand-muted'}`} numberOfLines={1}>
+                    <Text className={`text-xl ${destination ? 'text-white font-bold' : 'text-brand-muted'}`} numberOfLines={1}>
                         {destination ? destination.name : "Куди їдемо?"}
                     </Text>
                 </TouchableOpacity>
 
                 {destination && (
                     <View className="flex-row items-center">
-                        <TouchableOpacity className="p-1 ml-2" onPress={onSaveFavorite}>
+                        <TouchableOpacity className="p-0.5 ml-2" onPress={onSaveFavorite}>
                             <MaterialCommunityIcons name={isFavorite ? "star" : "star-outline"} size={28} color="#FFB800" />
                         </TouchableOpacity>
                         <TouchableOpacity className="p-1 ml-2.5" onPress={onClearRoute}>

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { trafficLights } from './data/lights.data';
-import { getDistance } from '../../common/utils/geo.util';
+import { getDistance, pointToSegmentDistance } from '../../common/utils/geo.util';
 import {
   LightOnRouteResult,
   LightPhaseResult,
@@ -8,21 +8,30 @@ import {
 } from './interfaces/traffic-light.interface';
 
 const MAX_SPEED_KMH = 60;
-const LIGHT_PROXIMITY_METERS = 60;
+const LIGHT_PROXIMITY_METERS = 20;
 const LOOKAHEAD_WINDOWS = 5;
 
 @Injectable()
 export class TrafficLightService {
   findNearestLightOnRoute(coords: [number, number][]): LightOnRouteResult | null {
+    let best: { light: TrafficLight; idx: number } | null = null;
+
     for (const light of trafficLights) {
-      for (let i = 0; i < coords.length; i++) {
-        const dist = getDistance(coords[i][1], coords[i][0], light.lat, light.lng);
+      for (let i = 0; i < coords.length - 1; i++) {
+        if (best && i >= best.idx) break;
+        const dist = pointToSegmentDistance(
+          light.lat, light.lng,
+          coords[i][1], coords[i][0],
+          coords[i + 1][1], coords[i + 1][0],
+        );
         if (dist < LIGHT_PROXIMITY_METERS) {
-          return { light, idx: i };
+          best = { light, idx: i };
+          break;
         }
       }
     }
-    return null;
+
+    return best;
   }
 
   calculateDistanceToLight(coords: [number, number][], lightIndex: number): number {

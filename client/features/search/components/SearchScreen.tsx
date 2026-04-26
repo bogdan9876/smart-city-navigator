@@ -1,17 +1,42 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, TouchableOpacity, TextInput, ScrollView, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import axios from 'axios';
+import { useApi } from '@/shared/hooks/useApi';
+
+type FavoriteRoute = { id: string; customName: string; originalAddress: string; latitude: number; longitude: number; };
 
 export default function SearchScreen({ onClose, onSelect }: { onClose: () => void, onSelect: (place: any) => void }) {
     const insets = useSafeAreaInsets();
+    const api = useApi();
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedQuery, setDebouncedQuery] = useState('');
     const [places, setPlaces] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [favorites, setFavorites] = useState<FavoriteRoute[]>([]);
 
     useEffect(() => {
+        api.get('/favorites')
+            .then(res => setFavorites(Array.isArray(res.data) ? res.data : []))
+            .catch(() => {});
+    }, []);
+
+    const matchedFavorites = useMemo(() => {
+        const q = searchQuery.trim().toLowerCase();
+        if (q.length === 0) return [];
+        return favorites.filter(f =>
+            f.customName.toLowerCase().includes(q) ||
+            f.originalAddress.toLowerCase().includes(q)
+        );
+    }, [searchQuery, favorites]);
+
+    useEffect(() => {
+        if (searchQuery.length < 3) {
+            setDebouncedQuery('');
+            setPlaces([]);
+            return;
+        }
         const timerId = setTimeout(() => setDebouncedQuery(searchQuery), 800);
         return () => clearTimeout(timerId);
     }, [searchQuery]);
@@ -49,7 +74,7 @@ export default function SearchScreen({ onClose, onSelect }: { onClose: () => voi
     };
 
     const isSearching = searchQuery !== debouncedQuery && searchQuery.length >= 3;
-    const showEmpty = !isLoading && !isSearching && debouncedQuery.length >= 3 && places.length === 0;
+    const showEmpty = !isLoading && !isSearching && debouncedQuery.length >= 3 && places.length === 0 && matchedFavorites.length === 0;
 
     return (
         <View className="absolute inset-0 bg-brand-black z-50 px-5" style={{ paddingTop: insets.top + 8 }}>
@@ -91,6 +116,29 @@ export default function SearchScreen({ onClose, onSelect }: { onClose: () => voi
                         <Text className="text-brand-muted text-sm mt-1 text-center">Введіть адресу, назву місця або орієнтир у Львові</Text>
                     </View>
                 )}
+
+                {matchedFavorites.length > 0 && (
+                    <View className="mb-2">
+                        <Text className="text-brand-muted text-xs font-bold uppercase tracking-wider mb-2 mt-1">Збережені</Text>
+                        {matchedFavorites.map((fav) => (
+                            <TouchableOpacity
+                                key={`fav-${fav.id}`}
+                                className="flex-row items-center py-4 border-b border-brand-border"
+                                onPress={() => onSelect({ name: fav.customName || fav.originalAddress, lat: fav.latitude, lng: fav.longitude })}
+                            >
+                                <View className="w-9 h-9 rounded-full bg-brand-card border border-brand-border items-center justify-center mr-3">
+                                    <MaterialCommunityIcons name="star" size={18} color="#FFB800" />
+                                </View>
+                                <View className="flex-1">
+                                    <Text className="text-base font-bold text-white" numberOfLines={1}>{fav.customName}</Text>
+                                    <Text className="text-xs text-brand-muted mt-0.5" numberOfLines={1}>{fav.originalAddress}</Text>
+                                </View>
+                                <MaterialCommunityIcons name="chevron-right" size={18} color="#2C2C2C" />
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                )}
+
                 {places.map((place, index) => (
                     <TouchableOpacity
                         key={index}

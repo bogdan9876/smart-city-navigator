@@ -321,7 +321,8 @@ export default function HomeScreen() {
               onChangeText={setSaveModalName}
               placeholder="Назва маршруту..."
               placeholderTextColor="#999999"
-              style={{ flex: 1, fontSize: 16, color: '#FFFFFF', paddingHorizontal: 16 }}
+              className="bg-brand-surface border border-brand-border rounded-xl mb-4"
+              style={{ fontSize: 16, color: '#FFFFFF', paddingHorizontal: 16, paddingVertical: 12 }}
               autoFocus
               selectTextOnFocus
             />
