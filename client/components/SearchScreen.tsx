@@ -3,9 +3,11 @@ import { View, Text, TouchableOpacity, TextInput, ScrollView, ActivityIndicator 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import axios from 'axios';
+import { useSearchHistory } from '@/shared/hooks/useSearchHistory';
 
 export default function SearchScreen({ onClose, onSelect }: { onClose: () => void, onSelect: (place: any) => void }) {
     const insets = useSafeAreaInsets();
+    const { history, addToHistory, clearHistory, removeItem } = useSearchHistory();
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedQuery, setDebouncedQuery] = useState('');
     const [places, setPlaces] = useState<any[]>([]);
@@ -50,6 +52,12 @@ export default function SearchScreen({ onClose, onSelect }: { onClose: () => voi
 
     const isSearching = searchQuery !== debouncedQuery && searchQuery.length >= 3;
     const showEmpty = !isLoading && !isSearching && debouncedQuery.length >= 3 && places.length === 0;
+    const showHistory = searchQuery.length === 0 && history.length > 0;
+
+    const handleSelect = (place: { name: string; lat: number; lng: number }) => {
+        addToHistory(place);
+        onSelect(place);
+    };
 
     return (
         <View className="absolute inset-0 bg-brand-black z-50 px-5" style={{ paddingTop: insets.top + 8 }}>
@@ -84,18 +92,42 @@ export default function SearchScreen({ onClose, onSelect }: { onClose: () => voi
             </View>
 
             <ScrollView keyboardShouldPersistTaps="handled">
-                {searchQuery.length === 0 && (
+                {searchQuery.length === 0 && history.length === 0 && (
                     <View className="items-center mt-16 px-4">
                         <MaterialCommunityIcons name="magnify" size={48} color="#2C2C2C" />
                         <Text className="text-white font-semibold text-lg mt-4">Куди їдемо?</Text>
                         <Text className="text-brand-muted text-sm mt-1 text-center">Введіть адресу, назву місця або орієнтир у Львові</Text>
                     </View>
                 )}
+
+                {showHistory && (
+                    <View className="mb-2">
+                        <View className="flex-row items-center justify-between mb-2 mt-1">
+                            <Text className="text-brand-muted text-xs font-bold uppercase tracking-wider">Нещодавні</Text>
+                            <TouchableOpacity onPress={clearHistory} className="py-1 px-2">
+                                <Text className="text-brand-muted text-xs">Очистити</Text>
+                            </TouchableOpacity>
+                        </View>
+                        {history.map((item) => (
+                            <View key={`hist-${item.lat}-${item.lng}`} className="flex-row items-center py-3.5 border-b border-brand-border">
+                                <TouchableOpacity className="flex-row items-center flex-1" onPress={() => handleSelect(item)}>
+                                    <View className="w-9 h-9 rounded-full bg-brand-card border border-brand-border items-center justify-center mr-3">
+                                        <MaterialCommunityIcons name="history" size={18} color="#999999" />
+                                    </View>
+                                    <Text className="text-base text-white flex-1" numberOfLines={1}>{item.name}</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity className="p-2 ml-1" onPress={() => removeItem(item.lat, item.lng)}>
+                                    <MaterialCommunityIcons name="close" size={16} color="#555555" />
+                                </TouchableOpacity>
+                            </View>
+                        ))}
+                    </View>
+                )}
                 {places.map((place, index) => (
                     <TouchableOpacity
                         key={index}
                         className="flex-row items-center py-4 border-b border-brand-border"
-                        onPress={() => onSelect({ name: formatPlaceName(place), lat: parseFloat(place.lat), lng: parseFloat(place.lon) })}
+                        onPress={() => handleSelect({ name: formatPlaceName(place), lat: parseFloat(place.lat), lng: parseFloat(place.lon) })}
                     >
                         <View className="w-9 h-9 rounded-full bg-brand-card border border-brand-border items-center justify-center mr-3">
                             <MaterialCommunityIcons name="map-marker-outline" size={18} color="#999999" />

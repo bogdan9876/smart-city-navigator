@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { RoutingService } from './routing.service';
 import { TrafficLightService } from './traffic-light.service';
+import { getDistance } from '../../common/utils/geo.util';
 
 @Injectable()
 export class TrafficService {
@@ -9,6 +10,7 @@ export class TrafficService {
     private readonly trafficLightService: TrafficLightService,
   ) {}
 
+  // ── Legacy: builds route via OSRM (kept for reference) ────────────────────
   async getTrafficAdvice(
     userLat: number,
     userLng: number,
@@ -18,13 +20,26 @@ export class TrafficService {
     const { distanceMeters, coords } = await this.routingService.getRoute(
       userLat, userLng, destLat, destLng,
     );
+    return this.buildResponse(coords, distanceMeters);
+  }
 
+  // ── New: accepts pre-built Mapbox coords, no OSRM call ────────────────────
+  analyseRoute(
+    coords: [number, number][],
+    totalDistanceMeters?: number,
+  ) {
+    // If Mapbox already gave us the distance — use it. Otherwise compute from coords.
+    const distanceMeters = totalDistanceMeters ?? this.calcDistanceFromCoords(coords);
+    return this.buildResponse(coords, distanceMeters);
+  }
+
+  // ── Shared response builder ────────────────────────────────────────────────
+  private buildResponse(coords: [number, number][], distanceMeters: number) {
     const lightsOnRoute = this.trafficLightService.findAllLightsOnRoute(coords);
 
     if (lightsOnRoute.length === 0) {
       return {
         hasLight: false,
-        routeCoords: coords,
         distanceMeters: Math.round(distanceMeters),
       };
     }
@@ -34,17 +49,12 @@ export class TrafficService {
 
     return {
       hasLight: true,
-      routeCoords: coords,
       distanceMeters: Math.round(distanceMeters),
-
-      // Legacy single-light fields point to the closest light:
       distanceToLight: Math.round(first.distanceMeters),
       phase: first.phaseAtArrival,
       timeLeft: first.timeLeftAtArrival,
       recommendedSpeedKmh: wave.recommendedSpeedKmh,
       targetLight: first.light,
-
-      // Green-wave additions:
       lightsAhead: wave.lightsAhead.map((l) => ({
         light: l.light,
         distanceMeters: Math.round(l.distanceMeters),
@@ -54,4 +64,16 @@ export class TrafficService {
       greenCount: wave.greenCount,
     };
   }
+
+  private calcDistanceFromCoords(coords: [number, number][]): number {
+    let total = 0;
+    for (let i = 0; i < coords.length - 1; i++) {
+      total += getDistance(
+        coords[i][1], coords[i][0],
+        coords[i + 1][1], coords[i + 1][0],
+      );
+    }
+    return total;
+  }
 }
+

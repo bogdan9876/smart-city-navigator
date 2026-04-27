@@ -11,30 +11,22 @@ const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  console.log(`Seeding ${trafficLights.length} traffic lights…`);
+  const deleted = await prisma.trafficLight.deleteMany({});
+  console.log(`Removed ${deleted.count} existing traffic lights.`);
 
-  for (const light of trafficLights) {
-    await prisma.trafficLight.upsert({
-      where: { id: light.id },
-      update: {
-        name: light.name,
-        lat: light.lat,
-        lng: light.lng,
-        green: light.green,
-        red: light.red,
-        start: new Date(light.start),
-      },
-      create: {
-        id: light.id,
-        name: light.name,
-        lat: light.lat,
-        lng: light.lng,
-        green: light.green,
-        red: light.red,
-        start: new Date(light.start),
-      },
-    });
-  }
+  console.log(`Seeding ${trafficLights.length} traffic lights…`);
+  await prisma.trafficLight.createMany({
+    data: trafficLights.map((light) => ({
+      id: light.id,
+      name: light.name,
+      lat: light.lat,
+      lng: light.lng,
+      green: light.green,
+      red: light.red,
+      start: new Date(light.start),
+      heading: light.heading,
+    })),
+  });
 
   console.log('Done ✓');
 }

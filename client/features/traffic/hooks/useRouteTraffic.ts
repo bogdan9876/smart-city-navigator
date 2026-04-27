@@ -10,6 +10,8 @@ export type TrafficSegment = {
 
 export type RouteTraffic = {
     coords: Coord[];
+    /** Raw GeoJSON coords [[lng, lat], ...] — same as Mapbox response, for sending to server */
+    rawCoords: [number, number][];
     segments: TrafficSegment[];
     worstLevel: TrafficLevel;
     delaySeconds: number;
@@ -95,7 +97,7 @@ export function useRouteTraffic(
                     return;
                 }
 
-                const rawCoords = route.geometry?.coordinates ?? [];
+                const rawCoords: [number, number][] = route.geometry?.coordinates ?? [];
                 const coords: Coord[] = rawCoords.map((c: any) => ({ latitude: c[1], longitude: c[0] }));
                 
                 const congestions = route.legs?.[0]?.annotation?.congestion ?? [];
@@ -158,14 +160,18 @@ export function useRouteTraffic(
                 const staticDuration = distance / typicalSpeedMps;
                 let delaySeconds = Math.max(0, duration - staticDuration);
                 
-                // Refine delay based on jam length
-                if (jamLengthMeters > 0) {
-                    const jamDelay = (jamLengthMeters / 2) - (jamLengthMeters / 11);
+                // Refine delay based on jam length:
+                // time_in_jam = jamLength / jam_speed (5 km/h ≈ 1.4 m/s)
+                // time_normal = jamLength / normal_speed (40 km/h ≈ 11 m/s)
+                // extra = time_in_jam - time_normal
+                if (jamLengthMeters > 50) {
+                    const jamDelay = jamLengthMeters / 1.4 - jamLengthMeters / 11;
                     delaySeconds = Math.max(delaySeconds, jamDelay);
                 }
 
                 const result: RouteTraffic = {
                     coords,
+                    rawCoords,
                     segments,
                     worstLevel,
                     delaySeconds,

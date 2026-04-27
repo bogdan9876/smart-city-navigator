@@ -9,6 +9,12 @@ export interface TrafficLight {
   red: number;
   /** Epoch ms when the cycle started (used for deterministic phase calculation) */
   start: number;
+  /**
+   * The compass bearing (0–359°) of traffic that this light controls.
+   * 0 = north, 90 = east, 180 = south, 270 = west.
+   * If null, bearing check is skipped (unknown direction).
+   */
+  heading: number | null;
 }
 
 export interface LightOnRoute {

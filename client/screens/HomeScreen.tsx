@@ -1,4 +1,4 @@
-import { fetchRouteAdvice } from '@/features/traffic/api/trafficApi';
+import { postRouteAnalysis } from '@/features/traffic/api/trafficApi';
 import Dashboard from '@/features/navigation/components/Dashboard';
 import SearchScreen from '@/features/search/components/SearchScreen';
 import { useLocation } from '@/features/location/hooks/useLocation';
@@ -29,7 +29,6 @@ export default function HomeScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const api = useApi();
-  const [route, setRoute] = useState<any[]>([]);
   const [advice, setAdvice] = useState<any>(null);
   const [destination, setDestination] = useState<{ name: string, lat: number, lng: number } | null>(null);
   const [isSearchActive, setIsSearchActive] = useState(false);
@@ -80,7 +79,6 @@ export default function HomeScreen() {
 
   const clearRoute = () => {
     setDestination(null);
-    setRoute([]);
     setAdvice(null);
     setIsDrivingMode(false);
 
@@ -170,8 +168,9 @@ export default function HomeScreen() {
     if (!userLoc) return;
 
     let heading = 0;
-    if (route.length > 1) {
-      heading = getBearing(userLoc, route[1]);
+    const routeCoords = trafficInfo?.coords ?? [];
+    if (routeCoords.length > 1) {
+      heading = getBearing(userLoc, routeCoords[1]);
     } else if (destination) {
       heading = getBearing(userLoc, { latitude: destination.lat, longitude: destination.lng });
     }
@@ -183,37 +182,39 @@ export default function HomeScreen() {
     }
   };
 
+  // When Mapbox route is ready — send coords to server for traffic light analysis
+  // and fit the map to the new route.
   useEffect(() => {
-    if (!destination || !userLoc) return;
+    if (!trafficInfo?.rawCoords?.length) {
+      setAdvice(null);
+      return;
+    }
 
-    const getRoadData = async () => {
-      console.log('[advice] → fetchRouteAdvice', { userLoc, destination });
-      const data = await fetchRouteAdvice(userLoc, destination);
-      console.log('[advice] ← response', data ? { hasLight: data.hasLight, error: data.error, coordsCount: data.routeCoords?.length } : 'null');
-      if (!data) return;
-
+    const analyseRoute = async () => {
+      console.log('[advice] → postRouteAnalysis, coords:', trafficInfo.rawCoords.length, 'dist:', trafficInfo.totalDistanceMeters);
+      const data = await postRouteAnalysis(
+        trafficInfo.rawCoords,
+        trafficInfo.totalDistanceMeters,
+      );
+      console.log('[advice] ← response', data ? { hasLight: data.hasLight, lightsCount: data.lightsAhead?.length } : 'null');
       setAdvice(data);
-      if (data.routeCoords && Array.isArray(data.routeCoords)) {
-        const newRoute = data.routeCoords.map((c: any) => ({ latitude: c[1], longitude: c[0] }));
-        setRoute(newRoute);
-
-        if (mapRef.current && newRoute.length > 0) {
-          mapRef.current.animateCamera({ pitch: 0, heading: 0 }, { duration: 500 });
-
-          setTimeout(() => {
-            if (mapRef.current) {
-              mapRef.current.fitToCoordinates(newRoute, {
-                edgePadding: { top: 50, right: 50, bottom: 100, left: 50 },
-                animated: true,
-              });
-            }
-          }, 1000);
-        }
-      }
     };
 
-    getRoadData();
-  }, [destination]);
+    analyseRoute();
+
+    // Fit map to Mapbox route
+    if (mapRef.current && trafficInfo.coords.length > 0) {
+      mapRef.current.animateCamera({ pitch: 0, heading: 0 }, { duration: 500 });
+      setTimeout(() => {
+        if (mapRef.current) {
+          mapRef.current.fitToCoordinates(trafficInfo.coords, {
+            edgePadding: { top: 50, right: 50, bottom: 100, left: 50 },
+            animated: true,
+          });
+        }
+      }, 1000);
+    }
+  }, [trafficInfo?.rawCoords]);
 
   useEffect(() => {
     if (userLoc) notifyLocationReady();
@@ -268,9 +269,7 @@ export default function HomeScreen() {
               />
             )}
           </>
-        ) : (
-          route.length > 1 && <Polyline coordinates={route} strokeColor="#00B14F" strokeWidth={5} />
-        )}
+        ) : null}
       </MapView>
 
       {!isSearchActive && !isDrivingMode && (

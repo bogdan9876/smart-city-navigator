@@ -18,7 +18,7 @@ function formatMinutes(minutes: number | undefined | null): string {
 
 export default function Dashboard({ destination, advice, liveTrafficData, trafficInfo, trafficError, onOpenSearch, onClearRoute, onSaveFavorite, isFavorite, isDrivingMode, onStartDrive }: any) {
     const insets = useSafeAreaInsets();
-    const hasTrafficIssue = trafficInfo && trafficInfo.worstLevel !== 'NORMAL';
+    const hasTrafficIssue = trafficInfo && trafficInfo.worstLevel !== 'NORMAL' && trafficInfo.delayMinutes >= 2;
     const adviceTotalDistance: number | undefined = advice?.hasLight === false ? advice?.distanceMeters : advice?.totalDistance;
     const totalDistance: number | undefined = trafficInfo?.totalDistanceMeters ?? adviceTotalDistance;
     const totalMinutes: number | undefined = trafficInfo?.totalDurationMinutes
@@ -81,7 +81,7 @@ export default function Dashboard({ destination, advice, liveTrafficData, traffi
                                 {advice.hasLight && (
                                     <View className="flex-1 bg-brand-card rounded-xl p-3 border border-brand-border items-center">
                                         <MaterialCommunityIcons name="traffic-light" size={20} color="#999999" />
-                                        <Text className="text-white font-bold text-lg mt-1">{formatDistance(advice.distanceMeters ?? advice.distanceToLight)}</Text>
+                                        <Text className="text-white font-bold text-lg mt-1">{formatDistance(advice.distanceToLight)}</Text>
                                         <Text className="text-brand-muted text-xs">до світлофора</Text>
                                     </View>
                                 )}
@@ -187,7 +187,7 @@ export default function Dashboard({ destination, advice, liveTrafficData, traffi
                                         <View className="flex-1 pl-5 justify-center">
                                             <View className="flex-row justify-between items-baseline mb-1.5">
                                                 <Text className="text-base text-brand-muted font-medium">До світлофора:</Text>
-                                                <Text className="text-lg text-white font-bold">{formatDistance(advice.distanceMeters ?? advice.distanceToLight)}</Text>
+                                                <Text className="text-lg text-white font-bold">{formatDistance(advice.distanceToLight)}</Text>
                                             </View>
                                             <View className="flex-row justify-between items-baseline mb-2">
                                                 <Text className="text-base text-brand-muted font-medium">Фаза:</Text>

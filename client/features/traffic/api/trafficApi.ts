@@ -1,13 +1,23 @@
 import axios from 'axios';
 
-export const fetchRouteAdvice = async (userLoc: { latitude: number, longitude: number }, destination: { lat: number, lng: number }) => {
-    const url = `${process.env.EXPO_PUBLIC_API_URL}/traffic/advice?lat=${userLoc.latitude}&lng=${userLoc.longitude}&destLat=${destination.lat}&destLng=${destination.lng}`;
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
+/**
+ * Sends pre-built Mapbox route coords to the server for traffic light analysis.
+ * Returns green-wave advice without triggering an internal OSRM call.
+ */
+export const postRouteAnalysis = async (
+    coords: [number, number][],
+    totalDistanceMeters?: number,
+): Promise<any | null> => {
     try {
-        const res = await axios.get(url);
+        const res = await axios.post(`${API_URL}/traffic/analyse`, {
+            coords,
+            totalDistanceMeters,
+        });
         return res.data;
     } catch (error: any) {
-        console.error("Помилка зв'язку з бекендом:", error.message);
+        console.error('[trafficApi] postRouteAnalysis error:', error.message);
         return null;
     }
 };
